@@ -1,0 +1,11 @@
+.npm-cache/
+setup.log
+setup-error.log
+
+**/node_modules/
+**/dist/
+**/coverage/
+
+.env
+.env.*
+!.env.example
