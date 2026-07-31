@@ -3,7 +3,11 @@
   "private": true,
   "version": "2.0.1",
   "scripts": {
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "npm run start:dev --prefix backend",
     "build": "npm run build --prefix frontend",
+    "build:all": "npm run build --prefix frontend && npm run build --prefix backend",
+    "test": "npm run test --prefix frontend && npm run test --prefix backend -- --runInBand",
     "firebase:login": "firebase login",
     "firebase:serve": "npm run build && firebase emulators:start --only hosting",
     "firebase:deploy": "npm run build && firebase deploy --only hosting"

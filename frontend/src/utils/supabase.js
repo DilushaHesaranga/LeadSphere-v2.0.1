@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js'
-import { auth } from '../firebase.js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
@@ -11,6 +10,9 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {
-  accessToken: async () =>
-    (await auth.currentUser?.getIdToken(/* forceRefresh */ false)) ?? null,
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
 })
