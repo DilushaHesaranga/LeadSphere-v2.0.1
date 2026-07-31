@@ -1,6 +1,8 @@
 .npm-cache/
 setup.log
 setup-error.log
+firebase-debug.log*
+.firebase/
 
 **/node_modules/
 **/dist/
