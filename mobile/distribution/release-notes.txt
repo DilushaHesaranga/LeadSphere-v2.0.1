@@ -1,0 +1,6 @@
+LeadSphere Mobile preview
+
+- Secure Supabase email and password authentication
+- Sales Executive role and permission verification
+- Session restoration, refresh, recovery, and logout
+- Home and Profile experiences matching currently implemented web functionality

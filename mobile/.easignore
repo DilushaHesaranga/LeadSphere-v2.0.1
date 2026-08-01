@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+node_modules
+dist
+coverage
+.expo
+firebase/*.json
+firebase/*.plist
+!firebase/*.example
+*.jks
+*.keystore
+*.p8
+*.p12
+*.mobileprovision

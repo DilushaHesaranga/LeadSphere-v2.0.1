@@ -7,7 +7,12 @@ firebase-debug.log*
 **/node_modules/
 **/dist/
 **/coverage/
+**/.expo/
 
 .env
 .env.*
 !.env.example
+
+# Native Firebase app configuration is downloaded per registered app.
+mobile/firebase/google-services.json
+mobile/firebase/GoogleService-Info.plist
