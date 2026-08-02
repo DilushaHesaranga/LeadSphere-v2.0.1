@@ -78,7 +78,7 @@ export function AuthProvider({ children }) {
     hasRole: (role) => userHasRole(access.roles, role),
     getScope: (permission) =>
       getPermissionScope(access.permissionScopes, permission),
-    refreshAccess,
+    refreshAccess: () => refreshAccess(session),
     signOut: () => supabase.auth.signOut(),
   }), [access, accessError, loading, refreshAccess, session])
 

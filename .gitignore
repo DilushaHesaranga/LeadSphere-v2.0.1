@@ -3,6 +3,7 @@ setup.log
 setup-error.log
 firebase-debug.log*
 .firebase/
+supabase/.temp/
 
 **/node_modules/
 **/dist/

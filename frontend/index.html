@@ -4,7 +4,23 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <meta name="theme-color" content="#16734b" />
+    <script>
+      (() => {
+        try {
+          const mode = localStorage.getItem('leadsphere.theme-mode') || 'system'
+          const accent = localStorage.getItem('leadsphere.banner-color') || '#16734b'
+          const resolved = mode === 'system'
+            ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+            : mode
+          document.documentElement.dataset.theme = resolved
+          document.documentElement.dataset.themeMode = mode
+          document.documentElement.style.colorScheme = resolved
+          if (/^#[0-9a-fA-F]{6}$/.test(accent)) document.documentElement.style.setProperty('--accent', accent)
+        } catch { /* Use the safe CSS defaults. */ }
+      })()
+    </script>
+    <title>LeadSphere | ElDream CRM</title>
   </head>
   <body>
     <div id="root"></div>

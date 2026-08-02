@@ -7,6 +7,7 @@ import { ForgotPasswordPage } from './pages/ForgotPasswordPage.jsx'
 import { LandingPage } from './pages/LandingPage.jsx'
 import { LoginPage } from './pages/LoginPage.jsx'
 import { ResetPasswordPage } from './pages/ResetPasswordPage.jsx'
+import { ProfilePreferencesProvider } from './preferences/ProfilePreferencesContext.jsx'
 import { navigate } from './utils/router.js'
 import './App.css'
 
@@ -54,7 +55,9 @@ function Routes() {
 export default function App() {
   return (
     <AuthProvider>
-      <Routes />
+      <ProfilePreferencesProvider>
+        <Routes />
+      </ProfilePreferencesProvider>
     </AuthProvider>
   )
 }

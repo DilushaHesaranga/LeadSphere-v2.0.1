@@ -4,6 +4,7 @@ import { PERMISSIONS } from '../auth/permissions.js'
 import { AccessDenied } from '../components/Authorization.jsx'
 import { Brand } from '../components/Brand.jsx'
 import { Icon } from '../components/Icons.jsx'
+import { UserProfileMenu } from '../components/UserProfileMenu.jsx'
 import { canAccessNavigation, protectedRouteDestination } from '../utils/access.js'
 import { navigate } from '../utils/router.js'
 import { TeamManagementPage } from './TeamManagementPage.jsx'
@@ -25,7 +26,35 @@ const placeholderContent = {
 }
 
 function Overview({ profile, roles }) {
-  return <div className="console-content"><div className="page-heading"><div><span className="section-kicker">Workspace overview</span><h1>Good to see you{profile?.display_name ? `, ${profile.display_name.split(' ')[0]}` : ''}.</h1><p>Your LeadSphere console is ready. CRM modules will populate as your team begins working.</p></div></div><div className="empty-dashboard"><div className="dashboard-welcome"><span className="feature-icon"><Icon name="activity"/></span><h2>Your operating view starts here</h2><p>Once leads, customer records, and deals are added, this dashboard will show only the information your role is permitted to access.</p></div><div className="access-card"><small>Current access</small><strong>{roles.map((role) => role.name).join(', ') || 'No role assigned'}</strong><span>Permissions are enforced by Supabase Row Level Security.</span></div></div></div>
+  return (
+    <div className="console-content">
+      <div className="page-heading overview-heading">
+        <div>
+          <span className="section-kicker">Workspace overview</span>
+          <h1>Good to see you{profile?.display_name ? `, ${profile.display_name.split(' ')[0]}` : ''}.</h1>
+          <p>Your customer work, team context, and next actions will come together here.</p>
+        </div>
+        <span className="workspace-status"><i /> Workspace ready</span>
+      </div>
+      <div className="empty-dashboard">
+        <div className="dashboard-welcome">
+          <span className="feature-icon"><Icon name="activity"/></span>
+          <span className="dashboard-label">One connected customer story</span>
+          <h2>Your operating view starts here</h2>
+          <p>As your team captures leads and customer activity, LeadSphere will turn those signals into a clear, permission-aware path from first contact to delivery.</p>
+          <div className="journey-strip" aria-label="LeadSphere customer workflow">
+            <span><b>01</b> Capture</span><i /><span><b>02</b> Understand</span><i /><span><b>03</b> Move forward</span>
+          </div>
+        </div>
+        <div className="access-card">
+          <small>Your working lens</small>
+          <strong>{roles.map((role) => role.name).join(', ') || 'No role assigned'}</strong>
+          <span>Your workspace only reveals the customer and team context authorised for this role.</span>
+          <div className="access-assurance"><Icon name="shield" size={16} /> Protected by database-level access rules</div>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function Placeholder({ title, description }) {
@@ -65,7 +94,11 @@ export function ConsolePage({ pathname }) {
       </aside>
       {menuOpen && <button className="sidebar-overlay" onClick={() => setMenuOpen(false)} aria-label="Close navigation"/>}
       <div className="console-main">
-        <header className="console-topbar"><button className="icon-button mobile-menu" onClick={() => setMenuOpen(true)} aria-label="Open navigation"><Icon name="menu"/></button><span className="topbar-context">ElDream workspace</span><div className="profile-chip"><span>{(profile?.display_name || session.user.email || 'U').slice(0,1).toUpperCase()}</span><div><strong>{profile?.display_name || 'LeadSphere user'}</strong><small>{roles[0]?.name || 'Access pending'}</small></div></div></header>
+        <header className="console-topbar">
+          <button className="icon-button mobile-menu" onClick={() => setMenuOpen(true)} aria-label="Open navigation"><Icon name="menu"/></button>
+          <span className="topbar-context"><i /> ElDream workspace</span>
+          <UserProfileMenu profile={profile} roles={roles} email={session.user.email} onSignOut={logout} />
+        </header>
         {accessError && <div className="alert alert-error console-alert">{accessError}</div>}
         {content}
       </div>
