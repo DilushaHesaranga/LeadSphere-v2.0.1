@@ -8,19 +8,22 @@ import { UserProfileMenu } from '../components/UserProfileMenu.jsx'
 import { canAccessNavigation, protectedRouteDestination } from '../utils/access.js'
 import { navigate } from '../utils/router.js'
 import { TeamManagementPage } from './TeamManagementPage.jsx'
+import { CaseWorkspacePage } from './CaseWorkspacePage.jsx'
+import { CaseDetailPage } from './CaseDetailPage.jsx'
+import { PermissionsPage } from './PermissionsPage.jsx'
+import { TicketDetailPage } from './TicketDetailPage.jsx'
 
 const baseNavigation = [
   { path: '/console', label: 'Overview', icon: 'grid', exact: true },
-  { path: '/console/leads', label: 'Leads', icon: 'lead', permission: PERMISSIONS.LEADS_READ },
-  { path: '/console/customers', label: 'Customers', icon: 'users', anyPermission: [PERMISSIONS.ACCOUNTS_READ, PERMISSIONS.CUSTOMER_CONTEXT_READ] },
+  { path: '/console/leads', label: 'Leads', icon: 'lead', anyPermission: [PERMISSIONS.LEADS_READ, PERMISSIONS.TICKETS_READ] },
+  { path: '/console/customers', label: 'Customers', icon: 'users', anyPermission: [PERMISSIONS.ACCOUNTS_READ, PERMISSIONS.CUSTOMER_CONTEXT_READ, PERMISSIONS.TICKETS_READ] },
   { path: '/console/pipeline', label: 'Pipeline', icon: 'briefcase', permission: PERMISSIONS.PIPELINE_READ },
   { path: '/console/activity', label: 'Activity', icon: 'activity', permission: PERMISSIONS.ACTIVITIES_READ },
+  { path: '/console/permissions', label: 'Permissions', icon: 'lock', permission: PERMISSIONS.TICKET_REQUESTS_REVIEW },
   { path: '/console/team', label: 'Team Management', icon: 'shield', permission: PERMISSIONS.TEAM_MEMBERS_READ },
 ]
 
 const placeholderContent = {
-  '/console/leads': ['Leads', 'Lead management will appear here as the CRM workflow is implemented.'],
-  '/console/customers': ['Customers', 'Customer accounts and relationship context will appear here.'],
   '/console/pipeline': ['Pipeline', 'Deal stages and authorized pipeline reporting will appear here.'],
   '/console/activity': ['Activity', 'Calls, notes, tasks, and customer touchpoints will appear here.'],
 }
@@ -74,14 +77,23 @@ export function ConsolePage({ pathname }) {
   if (!session) return null
 
   const navigation = baseNavigation.filter((item) => canAccessNavigation(item, permissionScopes))
+  const isCaseRoute = /^\/console\/cases\/[0-9a-f-]+$/i.test(pathname)
+  const isTicketRoute = /^\/console\/tickets\/[0-9a-f-]+$/i.test(pathname)
   const requestedItem = baseNavigation.find((item) => item.path === pathname)
+    ?? (isCaseRoute ? { permission: PERMISSIONS.CASES_READ } : null)
+    ?? (isTicketRoute ? { permission: PERMISSIONS.TICKETS_READ } : null)
   const authorized = !requestedItem || canAccessNavigation(requestedItem, permissionScopes)
   const logout = async () => { await signOut(); navigate('/login', { replace: true }) }
 
   let content
   if (!authorized) content = <AccessDenied />
   else if (pathname === '/console') content = <Overview profile={profile} roles={roles}/>
+  else if (pathname === '/console/leads') content = <CaseWorkspacePage area="leads" />
+  else if (pathname === '/console/customers') content = <CaseWorkspacePage area="customers" />
+  else if (pathname === '/console/permissions') content = <PermissionsPage />
   else if (pathname === '/console/team') content = <TeamManagementPage />
+  else if (isCaseRoute) content = <CaseDetailPage caseId={pathname.split('/').at(-1)} />
+  else if (isTicketRoute) content = <TicketDetailPage ticketId={pathname.split('/').at(-1)} />
   else if (placeholderContent[pathname]) content = <Placeholder title={placeholderContent[pathname][0]} description={placeholderContent[pathname][1]}/>
   else content = <Placeholder title="Console" description="This protected module has not been configured yet."/>
 

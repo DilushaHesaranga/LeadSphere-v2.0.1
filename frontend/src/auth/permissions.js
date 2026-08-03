@@ -9,8 +9,27 @@ export const PERMISSIONS = Object.freeze({
   CUSTOMER_CONTEXT_READ: 'customer_context.read',
   ACTIVITIES_READ: 'activities.read',
   PIPELINE_READ: 'pipeline.read',
+  CASES_CREATE: 'cases.create',
+  CASES_READ: 'cases.read',
+  CASES_DELETE: 'cases.delete',
+  CASES_DELETE_REQUEST: 'cases.delete.request',
+  TICKETS_CREATE: 'tickets.create',
+  TICKETS_READ: 'tickets.read',
+  TICKETS_UPDATE: 'tickets.update',
+  TICKET_NOTES_CREATE: 'tickets.notes.create',
+  TICKET_REQUESTS_CREATE: 'tickets.requests.create',
+  TICKET_REQUESTS_REVIEW: 'tickets.requests.review',
+  TICKETS_CLOSE: 'tickets.close',
+  TICKETS_DELETE: 'tickets.delete',
+  TICKETS_DELETE_REQUEST: 'tickets.delete.request',
 })
 
 export const ROLES = Object.freeze({
   SYSTEM_ADMIN: 'system_admin',
+  MARKETING_EXECUTIVE: 'marketing_executive',
+  MARKETING_MANAGER: 'marketing_manager',
+  SALES_EXECUTIVE: 'sales_executive',
+  SALES_MANAGER: 'sales_manager',
+  DELIVERY_MANAGER: 'delivery_manager',
+  LEADERSHIP: 'leadership',
 })

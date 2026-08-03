@@ -19,6 +19,11 @@ Firebase Auth, Firebase databases, Firebase Functions, and Prisma are intentiona
 2. Run the migrations in filename order:
    - `supabase/migrations/20260731000100_rbac_and_invitations.sql`
    - `supabase/migrations/20260731000200_granular_rbac_scopes.sql`
+   - `supabase/migrations/20260802000100_profile_preferences_and_avatars.sql`
+   - `supabase/migrations/20260803000100_case_ticket_management.sql`
+   - `supabase/migrations/20260803000200_case_ticket_activity_hardening.sql`
+   - `supabase/migrations/20260803000300_global_visibility_and_deletion_approval.sql`
+   - `supabase/migrations/20260803000400_multi_assignee_ticket_creation.sql`
 3. In **Authentication > Providers > Email**, turn off public email sign-up. Administrator invitations continue to be created through the trusted server.
 4. In **Authentication > URL Configuration**, set the Site URL to the production Firebase Hosting URL and add these redirect URLs:
    - `http://localhost:5173/accept-invite`
@@ -27,7 +32,7 @@ Firebase Auth, Firebase databases, Firebase Functions, and Prisma are intentiona
    - `https://YOUR_FIREBASE_DOMAIN/reset-password`
 5. In **Authentication > Email Templates > Invite user**, paste `supabase/templates/invite.html`.
 
-The migrations create profiles, granular scoped permissions, teams, memberships, invitations, trusted authorization functions, the invitation-acceptance RPC, and RLS policies. A recipient never selects their own role. The role stored in `public.invitations` by the trusted server is assigned atomically when the recipient accepts. The complete matrix and future integration guide are in `docs/RBAC.md`.
+The migrations create profiles, granular scoped permissions, teams, memberships, invitations, trusted authorization functions, the invitation-acceptance RPC, Case/Ticket workflows, and RLS policies. A recipient never selects their own role. The role stored in `public.invitations` by the trusted server is assigned atomically when the recipient accepts. The authorization matrix is in `docs/RBAC.md`; the Case/Ticket data model and department-manager setup are in `docs/CASE_TICKET_MANAGEMENT.md`.
 
 ## 2. Create the first System Admin
 

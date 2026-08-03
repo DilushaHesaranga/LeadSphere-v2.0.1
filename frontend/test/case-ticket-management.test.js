@@ -1,0 +1,208 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+import {
+  canSelectInitialDepartment,
+  contactMethods,
+  getDefaultDepartment,
+  normalizePhone,
+  shouldShowContactPicker,
+  ticketBusinessArea,
+  validateCase,
+  validateTicket,
+} from '../src/config/crm.js'
+
+const migration = await readFile(new URL('../../supabase/migrations/20260803000100_case_ticket_management.sql', import.meta.url), 'utf8')
+const visibilityMigration = await readFile(new URL('../../supabase/migrations/20260803000300_global_visibility_and_deletion_approval.sql', import.meta.url), 'utf8')
+const multiAssigneeMigration = await readFile(new URL('../../supabase/migrations/20260803000400_multi_assignee_ticket_creation.sql', import.meta.url), 'utf8')
+const creationFlow = await readFile(new URL('../src/components/TicketCreationFlow.jsx', import.meta.url), 'utf8')
+const caseTicketService = await readFile(new URL('../src/services/caseTicketService.js', import.meta.url), 'utf8')
+const ticketPage = await readFile(new URL('../src/pages/TicketDetailPage.jsx', import.meta.url), 'utf8')
+const casePage = await readFile(new URL('../src/pages/CaseWorkspacePage.jsx', import.meta.url), 'utf8')
+const permissionsPage = await readFile(new URL('../src/pages/PermissionsPage.jsx', import.meta.url), 'utf8')
+const consolePage = await readFile(new URL('../src/pages/ConsolePage.jsx', import.meta.url), 'utf8')
+const styles = await readFile(new URL('../src/App.css', import.meta.url), 'utf8')
+
+test('1. one Case can contain multiple Tickets', () => {
+  assert.match(migration, /case_id uuid not null references public\.crm_cases\(id\) on delete restrict/)
+  assert.equal(migration.includes('unique (case_id)'), false)
+})
+
+test('2. one Ticket has exactly one Case relationship', () => {
+  assert.match(migration, /case_id uuid not null/)
+  assert.equal(migration.includes('case_ids'), false)
+})
+
+test('3. Marketing users receive Marketing as the default department', () => {
+  assert.equal(getDefaultDepartment([{ slug: 'marketing_executive' }]), 'marketing')
+})
+
+test('4. Sales users receive Sales as the default department', () => {
+  assert.equal(getDefaultDepartment([{ slug: 'sales_executive' }]), 'sales')
+  assert.equal(getDefaultDepartment([{ slug: 'sales_manager' }]), 'sales')
+})
+
+test('5. cross-department managers can select an initial department', () => {
+  assert.equal(canSelectInitialDepartment([{ slug: 'marketing_manager' }]), true)
+  assert.equal(canSelectInitialDepartment([{ slug: 'leadership' }]), true)
+  assert.equal(canSelectInitialDepartment([{ slug: 'sales_executive' }]), false)
+})
+
+test('6. New and Open Tickets appear in Leads', () => {
+  assert.equal(ticketBusinessArea('new'), 'leads')
+  assert.equal(ticketBusinessArea('open'), 'leads')
+})
+
+test('7. later-stage Tickets appear in Customers', () => {
+  for (const stage of ['qualified', 'proposal', 'won', 'delivery', 'closed_lost']) assert.equal(ticketBusinessArea(stage), 'customers')
+})
+
+test('8. creating under an existing Case skips the Case form', () => {
+  assert.match(creationFlow, /useState\(fixedCase \? 'ticket' : 'choice'\)/)
+  assert.match(casePage, /fixedCase=\{creation\.id \? creation : null\}/)
+})
+
+test('9. multiple contacts remain tied to their Ticket', () => {
+  assert.match(migration, /crm_ticket_contacts[\s\S]*ticket_id uuid not null references public\.crm_tickets\(id\) on delete cascade/)
+  assert.match(migration, /crm_ticket_contacts_ticket_idx/)
+})
+
+test('10. Email selection appears only for multiple emails', () => {
+  const contacts = [{ id: '1', name: 'A', email: 'a@example.com' }, { id: '2', name: 'B', email: 'b@example.com' }]
+  assert.equal(shouldShowContactPicker(contacts, 'email'), true)
+  assert.deepEqual(contactMethods(contacts.slice(0, 1), 'email').map((item) => item.name), ['A'])
+})
+
+test('11. Call selection appears only for multiple phone numbers', () => {
+  const contacts = [{ id: '1', name: 'A', phoneNumber: '+94111' }, { id: '2', name: 'B', phoneNumber: '+94222' }]
+  assert.equal(shouldShowContactPicker(contacts, 'phone'), true)
+  assert.equal(normalizePhone(' +94 77 123 4567 '), '+94771234567')
+})
+
+test('12. Assign to Me creates a pending request without immediate assignment', () => {
+  const body = migration.match(/create or replace function public\.request_crm_ticket_assignment[\s\S]*?end;\n\$\$;/)?.[0] ?? ''
+  assert.match(body, /'ASSIGN_TO_ME'/)
+  assert.match(body, /'PENDING'/)
+  assert.equal(body.includes('insert into public.crm_ticket_assignments'), false)
+})
+
+test('13. Post Ticket creates a pending request without changing department', () => {
+  const body = migration.match(/create or replace function public\.request_crm_ticket_post[\s\S]*?end;\n\$\$;/)?.[0] ?? ''
+  assert.match(body, /'POST_TICKET'/)
+  assert.match(body, /'PENDING'/)
+  assert.equal(body.includes('update public.crm_tickets set current_department'), false)
+})
+
+test('14. managers can atomically accept a request', () => {
+  assert.match(migration, /decision not in \('APPROVED','REJECTED','MODIFIED'\)/)
+  assert.match(permissionsPage, />Accept</)
+})
+
+test('15. managers can reject a request without applying a change', () => {
+  assert.match(migration, /decision in \('APPROVED','MODIFIED'\)/)
+  assert.match(permissionsPage, />Reject</)
+})
+
+test('16. managers can modify assignment or destination', () => {
+  assert.match(migration, /originalAssigneeId/)
+  assert.match(migration, /originalDepartment/)
+  assert.match(permissionsPage, />Modify</)
+})
+
+test('17. the Permissions route and navigation require review permission', () => {
+  assert.match(consolePage, /permission: PERMISSIONS\.TICKET_REQUESTS_REVIEW/)
+  assert.match(migration, /scope := public\.current_user_permission_scope\('tickets\.requests\.review'\)/)
+})
+
+test('18. ordinary executives cannot close Tickets', () => {
+  assert.equal(migration.includes("('sales_executive', 'tickets.close'"), false)
+  assert.equal(migration.includes("('marketing_executive', 'tickets.close'"), false)
+})
+
+test('19. closing preserves the Ticket record', () => {
+  const body = migration.match(/create or replace function public\.close_crm_ticket[\s\S]*?end;\n\$\$;/)?.[0] ?? ''
+  assert.match(body, /set status = 'closed'/)
+  assert.equal(/delete from public\.crm_tickets/.test(body), false)
+})
+
+test('20. duplicate pending requests are prevented at database level', () => {
+  assert.match(migration, /crm_ticket_requests_one_pending_assignment/)
+  assert.match(migration, /crm_ticket_requests_one_pending_transfer/)
+})
+
+test('21. Delete Case requires a manager request and cannot silently remove Tickets', () => {
+  assert.match(casePage, /<DeletionRequestDialog kind="case"/)
+  assert.match(visibilityMigration, /Archive every Ticket through manager approval before requesting Case deletion/)
+})
+
+test('22. required Case, Ticket, and contact validation works', () => {
+  assert.ok(validateCase('').companyName)
+  const errors = validateTicket({ caseId: '', projectTitle: '', currentDepartment: '', stage: '', responsibleManagerId: '', contacts: [{ name: '', email: '', phoneNumber: '' }] })
+  for (const key of ['caseId', 'projectTitle', 'currentDepartment', 'stage', 'responsibleManagerId', 'contactRows']) assert.ok(errors[key])
+})
+
+test('23. Ticket actions and forms adapt at mobile width', () => {
+  assert.match(styles, /@media \(max-width:760px\)[\s\S]*\.ticket-primary-actions/)
+  assert.match(styles, /\.contact-form-row[\s\S]*grid-template-columns:1fr/)
+  assert.match(ticketPage, /Email/)
+  assert.match(ticketPage, /Call/)
+})
+
+test('24. every business role receives company-wide Case and Ticket visibility', () => {
+  assert.match(visibilityMigration, /permission\.slug = any\(array\['cases\.read', 'tickets\.read'\]\)/)
+  for (const role of ['marketing_executive', 'sales_executive', 'sales_manager', 'delivery_manager', 'leadership', 'viewer']) {
+    assert.ok(visibilityMigration.includes(`'${role}'`))
+  }
+  assert.match(visibilityMigration, /'company'::public\.data_access_scope/)
+})
+
+test('25. deletion requests remain pending and cannot call direct archive RPCs', () => {
+  const ticketRequest = visibilityMigration.match(/create or replace function public\.request_crm_ticket_deletion[\s\S]*?end;\n\$\$;/)?.[0] ?? ''
+  const caseRequest = visibilityMigration.match(/create or replace function public\.request_crm_case_deletion[\s\S]*?end;\n\$\$;/)?.[0] ?? ''
+  assert.match(ticketRequest, /'DELETE_TICKET'/)
+  assert.match(caseRequest, /'DELETE_CASE'/)
+  assert.equal(ticketRequest.includes("set status = 'archived'"), false)
+  assert.equal(caseRequest.includes('set deleted_at = now()'), false)
+  assert.match(visibilityMigration, /revoke execute on function public\.archive_crm_ticket\(uuid\) from authenticated/)
+  assert.match(visibilityMigration, /revoke execute on function public\.archive_crm_case\(uuid\) from authenticated/)
+})
+
+test('26. manager approval atomically archives deletion requests', () => {
+  const review = visibilityMigration.match(/create or replace function public\.review_crm_ticket_request[\s\S]*?end;\n\$\$;/)?.[0] ?? ''
+  assert.match(review, /request_record\.request_type = 'DELETE_TICKET'/)
+  assert.match(review, /status = 'archived', deleted_at = now\(\), deleted_by_user_id = actor/)
+  assert.match(review, /request_record\.request_type = 'DELETE_CASE'/)
+  assert.match(review, /update public\.crm_ticket_permission_requests set[\s\S]*status = decision/)
+})
+
+test('27. company-wide Ticket visibility does not expose the manager review queue', () => {
+  const policy = visibilityMigration.match(/create policy crm_requests_read[\s\S]*?\n\);/)?.[0] ?? ''
+  assert.match(policy, /requested_by_user_id = \(select auth\.uid\(\)\)/)
+  assert.match(policy, /current_user_has_permission\('tickets\.requests\.review'\)/)
+  assert.equal(policy.includes("crm_can_access_ticket(ticket_id, 'tickets.read')"), false)
+})
+
+test('28. one Ticket supports multiple simultaneous assignees', () => {
+  assert.match(migration, /primary key \(ticket_id, user_id\)/)
+  assert.match(multiAssigneeMigration, /from unnest\(distinct_ids\) as selected\(user_id\)/)
+  assert.match(multiAssigneeMigration, /on conflict \(ticket_id, user_id\) do update/)
+  assert.equal(multiAssigneeMigration.includes('delete from public.crm_ticket_assignments'), false)
+})
+
+test('29. managers can select multiple assignees while creating a Ticket', () => {
+  assert.match(creationFlow, /assigneeIds: \[\]/)
+  assert.match(creationFlow, /type="checkbox"/)
+  assert.match(creationFlow, /can\(PERMISSIONS\.TICKET_REQUESTS_REVIEW\)/)
+  assert.match(caseTicketService, /p_assignee_ids: input\.assigneeIds \?\? \[\]/)
+  assert.match(caseTicketService, /create_crm_ticket_with_assignees/)
+})
+
+test('30. all managerial roles can create Cases and Tickets', () => {
+  for (const role of ['sales_manager', 'marketing_manager', 'leadership']) {
+    assert.ok(migration.includes(`('${role}', 'cases.create'`))
+    assert.ok(migration.includes(`('${role}', 'tickets.create'`))
+  }
+  assert.match(multiAssigneeMigration, /role\.slug = 'delivery_manager'/)
+  assert.match(multiAssigneeMigration, /array\['cases\.create', 'tickets\.create'\]/)
+  assert.match(migration, /r\.slug = 'system_admin'[\s\S]*p\.slug like any \(array\['cases\.%', 'tickets\.%'\]\)/)
+})
