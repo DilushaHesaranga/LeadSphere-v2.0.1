@@ -25,6 +25,13 @@ test('profile card supports trigger, outside click, Escape, and edit mode', () =
   assert.match(profileMenu, /event\.key !== 'Escape'/)
   assert.match(profileMenu, /setEditing\(true\)/)
   assert.match(profileEditor, /role="dialog" aria-modal="true"/)
+  assert.match(profileEditor, /createPortal/)
+  assert.match(profileEditor, /document\.body/)
+})
+
+test('profile editor is centered against the viewport and remains scrollable on mobile', () => {
+  assert.match(styles, /\.profile-editor-backdrop \{[^}]*place-items:center/)
+  assert.match(styles, /\.profile-editor \{[^}]*max-height:calc\(100dvh - 32px\)/)
 })
 test('saved profile data refreshes the authoritative access profile immediately', () => {
   assert.match(preferences, /await saveUserProfile/)

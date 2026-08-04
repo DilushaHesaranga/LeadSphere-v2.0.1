@@ -23,6 +23,23 @@
   --surface-raised: #ffffff;
   --surface-soft: #f2f5f0;
   --surface-hover: #e9eee9;
+  --text-primary: var(--ink);
+  --text-secondary: var(--muted);
+  --text-muted: var(--muted);
+  --background-primary: var(--page);
+  --background-secondary: var(--surface-soft);
+  --background-elevated: var(--surface-raised);
+  --border-default: var(--line);
+  --border-strong: color-mix(in srgb, var(--ink) 24%, var(--line));
+  --action-primary: var(--accent);
+  --action-hover: var(--accent-strong);
+  --status-success: var(--success);
+  --status-warning: #876211;
+  --status-error: var(--danger);
+  --status-info: #1a668a;
+  --border-subtle: var(--line);
+  --focus-ring: #67b890;
+  --badge-surface: var(--surface-soft);
   --overlay: rgba(8, 25, 17, 0.56);
   --danger: #ad312e;
   --danger-bg: #fff0ef;
@@ -40,18 +57,18 @@
 }
 
 :root[data-theme='dark'] {
-  --page: #0d1511;
-  --ink: #edf5f0;
-  --muted: #9eafa5;
-  --line: #29382f;
-  --surface: #151f19;
+  --page: #0b1210;
+  --ink: #f2f8f4;
+  --muted: #afbeb5;
+  --line: #35483d;
+  --surface: #141e19;
   --surface-raised: #1a2720;
-  --surface-soft: #202d26;
-  --surface-hover: #29382f;
+  --surface-soft: #202f27;
+  --surface-hover: #2b3d33;
   --navy: #09110d;
   --overlay: rgba(0, 0, 0, 0.7);
-  --danger-bg: #381c1c;
-  --danger: #ff9a95;
+  --danger-bg: #3d2020;
+  --danger: #ffaaa5;
   --success-bg: #143326;
   --success: #7bdda4;
   --shadow-sm: 0 8px 24px rgba(0, 0, 0, 0.24);
@@ -65,9 +82,11 @@ body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--page); 
 button, input, select { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
+button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: not-allowed; opacity: .62; }
+input::placeholder, textarea::placeholder { color: var(--text-muted); opacity: 1; }
 a { color: inherit; }
 img, svg { display: block; }
-:focus-visible { outline: 3px solid var(--accent-muted); outline-offset: 3px; }
+:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
 #root { min-height: 100vh; }
 
 ::selection { background: var(--accent-muted); color: #102018; }

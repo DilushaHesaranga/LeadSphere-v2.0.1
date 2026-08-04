@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useProfilePreferences } from '../preferences/ProfilePreferencesContext.jsx'
 import { validateAvatarFile } from '../utils/profile.js'
 import { normalizeHexColor } from '../utils/theme.js'
@@ -74,7 +75,7 @@ export function ProfileEditor({ profile, email, onClose, onSaved }) {
 
   const shownAvatar = resetAvatar ? null : previewUrl || avatarUrl
 
-  return (
+  return createPortal(
     <div className="modal-backdrop profile-editor-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <div ref={dialogRef} className="modal profile-editor" role="dialog" aria-modal="true" aria-labelledby="profile-editor-title">
         <div className="modal-header">
@@ -100,6 +101,7 @@ export function ProfileEditor({ profile, email, onClose, onSaved }) {
           <div className="modal-actions"><button type="button" className="button button-secondary" onClick={onClose}>Cancel</button><button className="button button-primary" disabled={saving}>{saving ? 'Saving...' : 'Save changes'}</button></div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { PERMISSIONS } from '../auth/permissions.js'
 import { AccessDenied } from '../components/Authorization.jsx'
 import { Brand } from '../components/Brand.jsx'
 import { Icon } from '../components/Icons.jsx'
+import { NotificationCenter } from '../components/NotificationCenter.jsx'
+import { caseTicketService } from '../services/caseTicketService.js'
 import { UserProfileMenu } from '../components/UserProfileMenu.jsx'
 import { canAccessNavigation, protectedRouteDestination } from '../utils/access.js'
 import { navigate } from '../utils/router.js'
@@ -17,6 +19,8 @@ const baseNavigation = [
   { path: '/console', label: 'Overview', icon: 'grid', exact: true },
   { path: '/console/leads', label: 'Leads', icon: 'lead', anyPermission: [PERMISSIONS.LEADS_READ, PERMISSIONS.TICKETS_READ] },
   { path: '/console/customers', label: 'Customers', icon: 'users', anyPermission: [PERMISSIONS.ACCOUNTS_READ, PERMISSIONS.CUSTOMER_CONTEXT_READ, PERMISSIONS.TICKETS_READ] },
+  { path: '/console/cases', label: 'Cases', icon: 'file' },
+  { path: '/console/timeline', label: 'Timeline', icon: 'timeline' },
   { path: '/console/pipeline', label: 'Pipeline', icon: 'briefcase', permission: PERMISSIONS.PIPELINE_READ },
   { path: '/console/activity', label: 'Activity', icon: 'activity', permission: PERMISSIONS.ACTIVITIES_READ },
   { path: '/console/permissions', label: 'Permissions', icon: 'lock', permission: PERMISSIONS.TICKET_REQUESTS_REVIEW },
@@ -24,6 +28,8 @@ const baseNavigation = [
 ]
 
 const placeholderContent = {
+  '/console/cases': ['Cases', 'Cases functionality will be available in a future update.'],
+  '/console/timeline': ['Timeline', 'Timeline functionality will be available in a future update.'],
   '/console/pipeline': ['Pipeline', 'Deal stages and authorized pipeline reporting will appear here.'],
   '/console/activity': ['Activity', 'Calls, notes, tasks, and customer touchpoints will appear here.'],
 }
@@ -67,6 +73,31 @@ function Placeholder({ title, description }) {
 export function ConsolePage({ pathname }) {
   const { session, profile, roles, permissionScopes, loading, accessError, signOut } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [pendingRequestCount, setPendingRequestCount] = useState(0)
+  const userId = session?.user?.id
+  const mayReviewRequests = canAccessNavigation(baseNavigation.find((item) => item.path === '/console/permissions'), permissionScopes)
+
+  const loadPendingRequestCount = useCallback(async () => {
+    if (!userId || !mayReviewRequests) return setPendingRequestCount(0)
+    try {
+      const pending = await caseTicketService.listRequests('PENDING')
+      setPendingRequestCount(pending.length)
+    } catch { setPendingRequestCount(0) }
+  }, [mayReviewRequests, userId])
+
+  useEffect(() => {
+    loadPendingRequestCount()
+    if (!mayReviewRequests) return undefined
+    const timer = window.setInterval(loadPendingRequestCount, 30000)
+    const refresh = () => loadPendingRequestCount()
+    window.addEventListener('leadsphere:permissions-changed', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('leadsphere:permissions-changed', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [loadPendingRequestCount, mayReviewRequests])
 
   useEffect(() => {
     const destination = protectedRouteDestination({ loading, hasSession: Boolean(session) })
@@ -101,15 +132,14 @@ export function ConsolePage({ pathname }) {
     <div className="console-shell">
       <aside className={`console-sidebar ${menuOpen ? 'open' : ''}`}>
         <div className="sidebar-brand"><Brand/><button className="icon-button mobile-close" onClick={() => setMenuOpen(false)} aria-label="Close navigation"><Icon name="close"/></button></div>
-        <nav aria-label="Console navigation">{navigation.map((item) => <button key={item.path} className={`sidebar-link ${pathname === item.path ? 'active' : ''}`} onClick={() => { navigate(item.path); setMenuOpen(false) }}><Icon name={item.icon}/><span>{item.label}</span></button>)}</nav>
+        <nav aria-label="Console navigation">{navigation.map((item) => <button key={item.path} className={`sidebar-link ${pathname === item.path ? 'active' : ''}`} onClick={() => { navigate(item.path); setMenuOpen(false) }}><Icon name={item.icon}/><span>{item.label}</span>{item.path === '/console/permissions' && pendingRequestCount > 0 && <span className="sidebar-count" aria-label={`${pendingRequestCount} pending permission requests`}>{pendingRequestCount > 99 ? '99+' : pendingRequestCount}</span>}</button>)}</nav>
         <div className="sidebar-foot"><button className="sidebar-link" onClick={logout}><Icon name="logout"/><span>Sign out</span></button></div>
       </aside>
       {menuOpen && <button className="sidebar-overlay" onClick={() => setMenuOpen(false)} aria-label="Close navigation"/>}
       <div className="console-main">
         <header className="console-topbar">
           <button className="icon-button mobile-menu" onClick={() => setMenuOpen(true)} aria-label="Open navigation"><Icon name="menu"/></button>
-          <span className="topbar-context"><i /> ElDream workspace</span>
-          <UserProfileMenu profile={profile} roles={roles} email={session.user.email} onSignOut={logout} />
+          <div className="topbar-actions"><NotificationCenter/><UserProfileMenu profile={profile} roles={roles} email={session.user.email} onSignOut={logout} /></div>
         </header>
         {accessError && <div className="alert alert-error console-alert">{accessError}</div>}
         {content}

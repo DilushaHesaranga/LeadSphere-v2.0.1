@@ -15,6 +15,7 @@ import {
 const migration = await readFile(new URL('../../supabase/migrations/20260803000100_case_ticket_management.sql', import.meta.url), 'utf8')
 const visibilityMigration = await readFile(new URL('../../supabase/migrations/20260803000300_global_visibility_and_deletion_approval.sql', import.meta.url), 'utf8')
 const multiAssigneeMigration = await readFile(new URL('../../supabase/migrations/20260803000400_multi_assignee_ticket_creation.sql', import.meta.url), 'utf8')
+const managerWorkflowMigration = await readFile(new URL('../../supabase/migrations/20260804000100_responsible_manager_workflow.sql', import.meta.url), 'utf8')
 const creationFlow = await readFile(new URL('../src/components/TicketCreationFlow.jsx', import.meta.url), 'utf8')
 const caseTicketService = await readFile(new URL('../src/services/caseTicketService.js', import.meta.url), 'utf8')
 const ticketPage = await readFile(new URL('../src/pages/TicketDetailPage.jsx', import.meta.url), 'utf8')
@@ -205,4 +206,109 @@ test('30. all managerial roles can create Cases and Tickets', () => {
   assert.match(multiAssigneeMigration, /role\.slug = 'delivery_manager'/)
   assert.match(multiAssigneeMigration, /array\['cases\.create', 'tickets\.create'\]/)
   assert.match(migration, /r\.slug = 'system_admin'[\s\S]*p\.slug like any \(array\['cases\.%', 'tickets\.%'\]\)/)
+})
+
+test('31. only Sales and Delivery Managers are eligible responsible managers', () => {
+  assert.match(managerWorkflowMigration, /role\.slug = any\(array\['sales_manager', 'delivery_manager'\]\)/)
+  const managerList = managerWorkflowMigration.match(/'managers',[\s\S]*?\) eligible_managers\)/)?.[0] ?? ''
+  assert.match(managerList, /array\['sales_manager', 'delivery_manager'\]/)
+  assert.doesNotMatch(managerList, /marketing_manager|leadership|system_admin/)
+})
+
+test('32. Sales and Delivery require their matching manager role', () => {
+  assert.match(managerWorkflowMigration, /when p_department = 'sales' then 'sales_manager'/)
+  assert.match(managerWorkflowMigration, /when p_department = 'delivery' then 'delivery_manager'/)
+})
+
+test('33. missing or ambiguous managers produce clear validation errors', () => {
+  assert.match(managerWorkflowMigration, /No eligible % is configured/)
+  assert.match(managerWorkflowMigration, /Select a responsible %/)
+})
+
+test('34. invalid historical department-manager mappings are ignored and removed', () => {
+  assert.match(managerWorkflowMigration, /delete from public\.crm_department_managers/)
+  assert.match(managerWorkflowMigration, /not public\.crm_is_eligible_responsible_manager/)
+})
+
+test('35. approved Sales or Delivery transfers move lead-stage Tickets to Customers', () => {
+  const transfer = managerWorkflowMigration.match(/create or replace function public\.crm_apply_ticket_transfer[\s\S]*?end;\n\$\$;/)?.[0] ?? ''
+  assert.match(transfer, /p_destination in \('sales', 'delivery'\) and destination_area = 'leads'/)
+  assert.match(transfer, /destination_stage := 'qualified'/)
+  assert.match(transfer, /destination_area := 'customers'/)
+})
+
+test('36. transfer updates the same Ticket and preserves its relationships', () => {
+  const transfer = managerWorkflowMigration.match(/create or replace function public\.crm_apply_ticket_transfer[\s\S]*?end;\n\$\$;/)?.[0] ?? ''
+  assert.match(transfer, /update public\.crm_tickets set/)
+  assert.match(transfer, /where id = p_ticket_id/)
+  assert.doesNotMatch(transfer, /insert into public\.crm_tickets/)
+  assert.doesNotMatch(transfer, /delete from public\.crm_ticket_(contacts|notes|assignments)/)
+})
+
+test('37. rejected transfers never invoke the transfer helper', () => {
+  const review = managerWorkflowMigration.match(/create or replace function public\.review_crm_ticket_request[\s\S]*?end;\n\$\$;/)?.[0] ?? ''
+  assert.match(review, /decision in \('APPROVED','MODIFIED'\) and request_record\.request_type = 'POST_TICKET'/)
+})
+
+test('38. manager Assign to Me is direct and audited', () => {
+  const assignment = managerWorkflowMigration.match(/create or replace function public\.request_crm_ticket_assignment[\s\S]*?end;\n\$\$;/)?.[0] ?? ''
+  assert.match(assignment, /tickets\.requests\.review/)
+  assert.match(assignment, /insert into public\.crm_ticket_assignments/)
+  assert.match(assignment, /'ASSIGNMENT_DIRECT'/)
+  assert.match(assignment, /'mode', 'direct'/)
+})
+
+test('39. manager Post Ticket and Delete Ticket are direct and audited', () => {
+  const post = managerWorkflowMigration.match(/create or replace function public\.request_crm_ticket_post[\s\S]*?end;\n\$\$;/)?.[0] ?? ''
+  const deletion = managerWorkflowMigration.match(/create or replace function public\.request_crm_ticket_deletion[\s\S]*?end;\n\$\$;/)?.[0] ?? ''
+  assert.match(post, /'TRANSFER_DIRECT'/)
+  assert.match(deletion, /tickets\.delete/)
+  assert.match(deletion, /'TICKET_DELETE_DIRECT'/)
+})
+
+test('40. executives still create pending permission requests', () => {
+  for (const functionName of ['request_crm_ticket_assignment', 'request_crm_ticket_post', 'request_crm_ticket_deletion']) {
+    const body = managerWorkflowMigration.match(new RegExp(`create or replace function public\\.${functionName}[\\s\\S]*?end;\\n\\$\\$;`))?.[0] ?? ''
+    assert.match(body, /'mode', 'requested'/)
+    assert.match(body, /'status', 'PENDING'/)
+  }
+})
+
+test('41. self-addressed creation and self-review are rejected server-side', () => {
+  assert.match(managerWorkflowMigration, /A request cannot be assigned to its requester/)
+  assert.match(managerWorkflowMigration, /if request_record\.requested_by_user_id = actor then raise exception 'You cannot review your own request'/)
+})
+
+test('42. Ticket details render one accessible active tab panel', () => {
+  for (const label of ['Overview', 'Contacts', 'Notes', 'Activity', 'Permissions', 'Timeline']) assert.ok(ticketPage.includes(`'${label}'`))
+  assert.doesNotMatch(ticketPage, /\['cases', 'Cases'\]/)
+  assert.match(ticketPage, /role="tablist"/)
+  assert.match(ticketPage, /aria-selected=/)
+  assert.match(ticketPage, /role="tabpanel"/)
+  assert.match(ticketPage, /activeTab === 'overview'/)
+})
+
+test('43. tab keyboard navigation and mobile horizontal scrolling are supported', () => {
+  assert.match(ticketPage, /ArrowLeft.*ArrowRight.*Home.*End/)
+  assert.match(styles, /\.ticket-tabs[\s\S]*overflow-x:auto/)
+  assert.match(styles, /@media \(max-width:760px\)[\s\S]*\.ticket-primary-actions[\s\S]*overflow-x:auto/)
+})
+
+test('44. Cases is global while the separate Ticket Timeline remains query-free', () => {
+  assert.match(consolePage, /path: '\/console\/cases', label: 'Cases'/)
+  assert.match(consolePage, /path: '\/console\/timeline', label: 'Timeline'/)
+  assert.match(ticketPage, /activeTab === 'timeline'.*<PlaceholderTab/)
+  assert.doesNotMatch(caseTicketService, /(getRelatedCases|getTimeline)/)
+})
+
+test('45. responsible manager editing uses the eligible reference list', () => {
+  assert.match(ticketPage, /reference\.managers\.filter/)
+  assert.match(ticketPage, /Select Sales or Delivery Manager/)
+  assert.match(ticketPage, /existing manager is no longer eligible/)
+})
+
+test('46. successful direct deletion navigates away without reloading the archived Ticket', () => {
+  assert.match(ticketPage, /result\?\.mode === 'direct' && result\.archived/)
+  assert.match(ticketPage, /navigate\(`\/console\/cases\/\$\{ticket\.caseId\}`\)/)
+  assert.match(ticketPage, /requestTicketDeletion\(ticketId\)[\s\S]*afterDirectDeletion/)
 })

@@ -44,7 +44,15 @@ export function TicketCreationFlow({ area = 'leads', fixedCase = null, onClose, 
     }).catch((error) => setNotice(error.message))
   }, [])
 
-  const resolvedManager = useMemo(() => reference.departmentManagers.find((item) => item.department === ticket.currentDepartment)?.managerId ?? '', [reference.departmentManagers, ticket.currentDepartment])
+  const eligibleManagers = useMemo(() => reference.managers.filter((manager) => (
+    ticket.currentDepartment === 'sales' ? manager.roleSlug === 'sales_manager'
+      : ticket.currentDepartment === 'delivery' ? manager.roleSlug === 'delivery_manager'
+        : ['sales_manager', 'delivery_manager'].includes(manager.roleSlug)
+  )), [reference.managers, ticket.currentDepartment])
+  const resolvedManager = useMemo(() => {
+    const mappedId = reference.departmentManagers.find((item) => item.department === ticket.currentDepartment)?.managerId ?? ''
+    return eligibleManagers.some((manager) => manager.id === mappedId) ? mappedId : eligibleManagers.length === 1 ? eligibleManagers[0].id : ''
+  }, [eligibleManagers, reference.departmentManagers, ticket.currentDepartment])
   useEffect(() => {
     if (!ticket.responsibleManagerId && resolvedManager) setTicket((current) => ({ ...current, responsibleManagerId: resolvedManager }))
   }, [resolvedManager, ticket.responsibleManagerId])
@@ -132,7 +140,7 @@ export function TicketCreationFlow({ area = 'leads', fixedCase = null, onClose, 
           <label className="field field-wide"><span>Project title</span><input value={ticket.projectTitle} onChange={(event) => setTicket({ ...ticket, projectTitle: event.target.value })} aria-describedby="project-error"/><FieldError id="project-error">{errors.projectTitle}</FieldError></label>
           <label className="field"><span>Current department</span><select value={ticket.currentDepartment} disabled={!maySelectDepartment && Boolean(defaultDepartment)} onChange={(event) => setTicket({ ...ticket, currentDepartment: event.target.value, responsibleManagerId: '' })}><option value="">Select department</option>{reference.departments.map((item) => <option key={item.slug} value={item.slug}>{item.name}</option>)}</select><FieldError>{errors.currentDepartment}</FieldError>{!maySelectDepartment && defaultDepartment && <small>Set automatically from your business role.</small>}</label>
           <label className="field"><span>Stage</span><select value={ticket.stage} onChange={(event) => setTicket({ ...ticket, stage: event.target.value })}><option value="">Select stage</option>{reference.stages.map((item) => <option key={item.slug} value={item.slug}>{item.name}</option>)}</select><FieldError>{errors.stage}</FieldError></label>
-          <label className="field field-wide"><span>Responsible manager</span><select value={ticket.responsibleManagerId} onChange={(event) => setTicket({ ...ticket, responsibleManagerId: event.target.value })}><option value="">Select responsible manager</option>{reference.managers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><FieldError>{errors.responsibleManagerId}</FieldError><small>Required so assignment and transfer requests always have a reviewer.</small></label>
+          <label className="field field-wide"><span>Responsible manager</span><select value={ticket.responsibleManagerId} onChange={(event) => setTicket({ ...ticket, responsibleManagerId: event.target.value })}><option value="">Select {ticket.currentDepartment === 'sales' ? 'Sales Manager' : ticket.currentDepartment === 'delivery' ? 'Delivery Manager' : 'Sales or Delivery Manager'}</option>{eligibleManagers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><FieldError>{errors.responsibleManagerId}</FieldError><small>Only an active Sales Manager or Delivery Manager can own and review this Ticket.</small></label>
           {mayAssignPeople && <fieldset className="field field-wide assignee-picker"><legend>Assigned people</legend><small>Select any number of people. Assigning one person does not replace the others.</small><div className="assignee-options">{reference.assignees.map((item) => <label key={item.id} className="assignee-option"><input type="checkbox" checked={ticket.assigneeIds.includes(item.id)} onChange={() => toggleAssignee(item.id)}/><span>{item.name}</span></label>)}{!reference.assignees.length && <span className="compact-empty">No active assignees are available.</span>}</div></fieldset>}
         </div>
         <div className="contact-form-heading"><div><h3>Company contacts</h3><p>Add at least one named contact with an email address or phone number.</p></div><button className="button button-secondary button-small" type="button" onClick={() => setTicket({ ...ticket, contacts: [...ticket.contacts, emptyContact()] })}><Icon name="plus" size={16}/>Add contact</button></div>

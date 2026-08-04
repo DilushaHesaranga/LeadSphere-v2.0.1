@@ -55,6 +55,7 @@ export function PermissionsPage() {
     setBusy(true); setError(''); setSuccess('')
     try {
       await caseTicketService.reviewRequest(decision.request.id, decision.type, options)
+      window.dispatchEvent(new Event('leadsphere:permissions-changed'))
       setSuccess(`${requestLabel(decision.request.requestType)} request ${decision.type.toLowerCase()}.`)
       setDecision(null)
       await load()
