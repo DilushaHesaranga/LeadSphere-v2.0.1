@@ -26,7 +26,7 @@ export function TicketCreationFlow({ area = 'leads', fixedCase = null, onClose, 
   const [reference, setReference] = useState({ departments: DEPARTMENTS, stages: TICKET_STAGES, managers: [], assignees: [], departmentManagers: [] })
   const [ticket, setTicket] = useState({
     projectTitle: '', currentDepartment: defaultDepartment,
-    stage: area === 'leads' ? 'new' : 'qualified', responsibleManagerId: '', assigneeIds: [], contacts: [emptyContact()],
+    stage: area === 'leads' ? 'qualification' : 'sales_order', responsibleManagerId: '', assigneeIds: [], contacts: [emptyContact()],
   })
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
@@ -36,7 +36,7 @@ export function TicketCreationFlow({ area = 'leads', fixedCase = null, onClose, 
     caseTicketService.getReferenceData().then((data) => {
       setReference({
         departments: data.departments?.length ? data.departments : DEPARTMENTS,
-        stages: data.stages?.length ? data.stages : TICKET_STAGES,
+        stages: data.stages?.length ? data.stages.map((stage) => ({ ...TICKET_STAGES.find((item) => item.slug === stage.slug), ...stage })) : TICKET_STAGES,
         managers: data.managers ?? [],
         assignees: data.assignees ?? [],
         departmentManagers: data.departmentManagers ?? [],
@@ -139,7 +139,7 @@ export function TicketCreationFlow({ area = 'leads', fixedCase = null, onClose, 
         <div className="form-grid">
           <label className="field field-wide"><span>Project title</span><input value={ticket.projectTitle} onChange={(event) => setTicket({ ...ticket, projectTitle: event.target.value })} aria-describedby="project-error"/><FieldError id="project-error">{errors.projectTitle}</FieldError></label>
           <label className="field"><span>Current department</span><select value={ticket.currentDepartment} disabled={!maySelectDepartment && Boolean(defaultDepartment)} onChange={(event) => setTicket({ ...ticket, currentDepartment: event.target.value, responsibleManagerId: '' })}><option value="">Select department</option>{reference.departments.map((item) => <option key={item.slug} value={item.slug}>{item.name}</option>)}</select><FieldError>{errors.currentDepartment}</FieldError>{!maySelectDepartment && defaultDepartment && <small>Set automatically from your business role.</small>}</label>
-          <label className="field"><span>Stage</span><select value={ticket.stage} onChange={(event) => setTicket({ ...ticket, stage: event.target.value })}><option value="">Select stage</option>{reference.stages.map((item) => <option key={item.slug} value={item.slug}>{item.name}</option>)}</select><FieldError>{errors.stage}</FieldError></label>
+          <label className="field"><span>Stage</span><select value={ticket.stage} onChange={(event) => setTicket({ ...ticket, stage: event.target.value })}><option value="">Select stage</option>{reference.stages.map((item) => <option key={item.slug} value={item.slug}>{item.name}</option>)}</select><FieldError>{errors.stage}</FieldError><small>{reference.stages.find((item) => item.slug === ticket.stage)?.description}</small></label>
           <label className="field field-wide"><span>Responsible manager</span><select value={ticket.responsibleManagerId} onChange={(event) => setTicket({ ...ticket, responsibleManagerId: event.target.value })}><option value="">Select {ticket.currentDepartment === 'sales' ? 'Sales Manager' : ticket.currentDepartment === 'delivery' ? 'Delivery Manager' : 'Sales or Delivery Manager'}</option>{eligibleManagers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><FieldError>{errors.responsibleManagerId}</FieldError><small>Only an active Sales Manager or Delivery Manager can own and review this Ticket.</small></label>
           {mayAssignPeople && <fieldset className="field field-wide assignee-picker"><legend>Assigned people</legend><small>Select any number of people. Assigning one person does not replace the others.</small><div className="assignee-options">{reference.assignees.map((item) => <label key={item.id} className="assignee-option"><input type="checkbox" checked={ticket.assigneeIds.includes(item.id)} onChange={() => toggleAssignee(item.id)}/><span>{item.name}</span></label>)}{!reference.assignees.length && <span className="compact-empty">No active assignees are available.</span>}</div></fieldset>}
         </div>

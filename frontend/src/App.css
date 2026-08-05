@@ -267,11 +267,12 @@
 .crm-badge i { width:6px;height:6px;border-radius:50%;background:currentColor; }
 .status-active,.request-approved { color:var(--success);background:var(--success-bg);border-color:color-mix(in srgb,var(--success) 24%,var(--line)); }
 .status-closed,.status-archived,.request-rejected { color:var(--danger);background:var(--danger-bg);border-color:color-mix(in srgb,var(--danger) 24%,var(--line)); }
-.request-pending,.stage-new,.stage-open { color:#876211;background:#fff6dd;border-color:#eadcae; }
-:root[data-theme='dark'] .request-pending,:root[data-theme='dark'] .stage-new,:root[data-theme='dark'] .stage-open { color:#f1cb75;background:#322b18;border-color:#554923; }
+.request-pending,.stage-qualification,.stage-proposal_or_price_quote,.stage-negotiation { color:#876211;background:#fff6dd;border-color:#eadcae; }
+:root[data-theme='dark'] .request-pending,:root[data-theme='dark'] .stage-qualification,:root[data-theme='dark'] .stage-proposal_or_price_quote,:root[data-theme='dark'] .stage-negotiation { color:#f1cb75;background:#322b18;border-color:#554923; }
 .request-modified { color:#6d4bb2;background:#f1ebff;border-color:#dcd0f4; }
 :root[data-theme='dark'] .request-modified { color:#cbb4ff;background:#2b223e;border-color:#48396a; }
-.stage-qualified,.stage-proposal,.stage-won,.stage-delivery { color:var(--accent);background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 22%,var(--line)); }
+.stage-sales_order,.stage-payment,.stage-close_won { color:var(--accent);background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 22%,var(--line)); }
+.stage-lost { color:var(--danger);background:var(--danger-soft);border-color:color-mix(in srgb,var(--danger) 24%,var(--line)); }
 .department-marketing { color:#6d4bb2; }.department-sales { color:var(--accent); }.department-delivery { color:#1a668a; }
 .flow-steps { display:flex;align-items:center;gap:10px;margin:20px 0 25px;color:var(--muted);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px; }
 .flow-steps span.active,.flow-steps span.complete { color:var(--accent); }
@@ -328,7 +329,15 @@ dt { color:var(--muted);font-size:10px;font-weight:800;text-transform:uppercase;
 .ticket-hero h1 { margin:8px 0 4px;font:600 34px/1.1 Georgia,serif; }.ticket-hero p { margin:0 0 13px;color:var(--muted); }
 .ticket-primary-actions { justify-content:flex-end; }
 .ticket-heading { min-width:0; }.ticket-heading h1 { overflow-wrap:anywhere; }
-.ticket-heading .ticket-assignees { margin-top:-7px;font-size:12px; }
+.ticket-heading .ticket-assignees { margin-top:-7px;display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px; }
+.ticket-assignees > div { display:flex;align-items:center;gap:6px;flex-wrap:wrap; }
+.assignee-chip { min-height:28px;padding:5px 9px;border:1px solid var(--line);border-radius:999px;background:var(--surface-soft);display:inline-flex;align-items:center;gap:5px;color:var(--ink);font-size:11px;font-weight:700;line-height:1.2; }
+button.assignee-chip { cursor:pointer; }.assignee-chip.removable:hover { border-color:var(--danger);color:var(--danger);background:var(--danger-soft); }.assignee-chip.add { border-style:dashed;color:var(--accent);background:var(--accent-soft); }
+.no-assignees { font-style:italic; }
+.assignee-search > div { position:relative; }.assignee-search > div .icon { position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none; }.assignee-search input { padding-left:38px; }
+.assignee-search-results { max-height:320px;overflow:auto;margin-top:15px;padding:3px;display:grid;gap:7px; }
+.assignee-search-results > button { width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:var(--surface-soft);display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:10px;color:var(--ink);text-align:left;font-weight:700; }
+.assignee-search-results > button:hover,.assignee-search-results > button.selected { border-color:var(--accent);background:var(--accent-soft); }.assignee-search-results .avatar { width:32px;height:32px;font-size:12px; }
 .ticket-primary-actions { position:relative;display:flex;align-items:center;flex-wrap:wrap;gap:8px; }
 .ticket-action-menu { position:relative; }
 .ticket-action-menu > summary { list-style:none;user-select:none; }

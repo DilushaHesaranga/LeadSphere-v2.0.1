@@ -51,6 +51,11 @@ export const caseTicketService = Object.freeze({
   }),
   addNote: (ticketId, content) => rpc('add_crm_ticket_note', { p_ticket_id: ticketId, p_content: content }),
   requestAssignment: (ticketId) => rpc('request_crm_ticket_assignment', { p_ticket_id: ticketId }),
+  updateAssignments: (ticketId, { addUserIds = [], removeUserIds = [] }) => rpc('update_crm_ticket_assignments', {
+    p_ticket_id: ticketId,
+    p_add_user_ids: addUserIds,
+    p_remove_user_ids: removeUserIds,
+  }),
   requestPost: (ticketId, requestedDepartment, requestNote) => rpc('request_crm_ticket_post', {
     p_ticket_id: ticketId,
     p_requested_department: requestedDepartment,

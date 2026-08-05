@@ -16,11 +16,15 @@ const migration = await readFile(new URL('../../supabase/migrations/202608030001
 const visibilityMigration = await readFile(new URL('../../supabase/migrations/20260803000300_global_visibility_and_deletion_approval.sql', import.meta.url), 'utf8')
 const multiAssigneeMigration = await readFile(new URL('../../supabase/migrations/20260803000400_multi_assignee_ticket_creation.sql', import.meta.url), 'utf8')
 const managerWorkflowMigration = await readFile(new URL('../../supabase/migrations/20260804000100_responsible_manager_workflow.sql', import.meta.url), 'utf8')
+const selfAssignmentMigration = await readFile(new URL('../../supabase/migrations/20260805000100_allow_unassigned_self_assignment.sql', import.meta.url), 'utf8')
+const pipelineStageMigration = await readFile(new URL('../../supabase/migrations/20260805000200_sales_pipeline_stages.sql', import.meta.url), 'utf8')
+const assignmentManagementMigration = await readFile(new URL('../../supabase/migrations/20260805000300_manage_ticket_assignees.sql', import.meta.url), 'utf8')
 const creationFlow = await readFile(new URL('../src/components/TicketCreationFlow.jsx', import.meta.url), 'utf8')
 const caseTicketService = await readFile(new URL('../src/services/caseTicketService.js', import.meta.url), 'utf8')
 const ticketPage = await readFile(new URL('../src/pages/TicketDetailPage.jsx', import.meta.url), 'utf8')
 const casePage = await readFile(new URL('../src/pages/CaseWorkspacePage.jsx', import.meta.url), 'utf8')
 const permissionsPage = await readFile(new URL('../src/pages/PermissionsPage.jsx', import.meta.url), 'utf8')
+const assigneeManagerDialog = await readFile(new URL('../src/components/AssigneeManagerDialog.jsx', import.meta.url), 'utf8')
 const consolePage = await readFile(new URL('../src/pages/ConsolePage.jsx', import.meta.url), 'utf8')
 const styles = await readFile(new URL('../src/App.css', import.meta.url), 'utf8')
 
@@ -49,13 +53,13 @@ test('5. cross-department managers can select an initial department', () => {
   assert.equal(canSelectInitialDepartment([{ slug: 'sales_executive' }]), false)
 })
 
-test('6. New and Open Tickets appear in Leads', () => {
-  assert.equal(ticketBusinessArea('new'), 'leads')
-  assert.equal(ticketBusinessArea('open'), 'leads')
+test('6. pre-order pipeline stages appear in Leads', () => {
+  for (const stage of ['qualification', 'proposal_or_price_quote', 'negotiation']) assert.equal(ticketBusinessArea(stage), 'leads')
 })
 
-test('7. later-stage Tickets appear in Customers', () => {
-  for (const stage of ['qualified', 'proposal', 'won', 'delivery', 'closed_lost']) assert.equal(ticketBusinessArea(stage), 'customers')
+test('7. Sales Order converts the lead into customer work', () => {
+  for (const stage of ['sales_order', 'payment', 'close_won', 'lost']) assert.equal(ticketBusinessArea(stage), 'customers')
+  assert.match(pipelineStageMigration, /'sales_order', 'Sales Order', 'customers'/)
 })
 
 test('8. creating under an existing Case skips the Case form', () => {
@@ -230,15 +234,16 @@ test('34. invalid historical department-manager mappings are ignored and removed
   assert.match(managerWorkflowMigration, /not public\.crm_is_eligible_responsible_manager/)
 })
 
-test('35. approved Sales or Delivery transfers move lead-stage Tickets to Customers', () => {
-  const transfer = managerWorkflowMigration.match(/create or replace function public\.crm_apply_ticket_transfer[\s\S]*?end;\n\$\$;/)?.[0] ?? ''
-  assert.match(transfer, /p_destination in \('sales', 'delivery'\) and destination_area = 'leads'/)
-  assert.match(transfer, /destination_stage := 'qualified'/)
-  assert.match(transfer, /destination_area := 'customers'/)
+test('35. department transfers do not change the pipeline stage or convert a lead', () => {
+  const transfer = pipelineStageMigration.match(/create or replace function public\.crm_apply_ticket_transfer[\s\S]*?end;\n\$\$;/)?.[0] ?? ''
+  const ticketUpdate = transfer.match(/update public\.crm_tickets set[\s\S]*?where id = p_ticket_id/)?.[0] ?? ''
+  assert.match(transfer, /'stage', ticket_record\.stage/)
+  assert.doesNotMatch(transfer, /destination_stage/)
+  assert.doesNotMatch(ticketUpdate, /stage\s*=/)
 })
 
 test('36. transfer updates the same Ticket and preserves its relationships', () => {
-  const transfer = managerWorkflowMigration.match(/create or replace function public\.crm_apply_ticket_transfer[\s\S]*?end;\n\$\$;/)?.[0] ?? ''
+  const transfer = pipelineStageMigration.match(/create or replace function public\.crm_apply_ticket_transfer[\s\S]*?end;\n\$\$;/)?.[0] ?? ''
   assert.match(transfer, /update public\.crm_tickets set/)
   assert.match(transfer, /where id = p_ticket_id/)
   assert.doesNotMatch(transfer, /insert into public\.crm_tickets/)
@@ -311,4 +316,44 @@ test('46. successful direct deletion navigates away without reloading the archiv
   assert.match(ticketPage, /result\?\.mode === 'direct' && result\.archived/)
   assert.match(ticketPage, /navigate\(`\/console\/cases\/\$\{ticket\.caseId\}`\)/)
   assert.match(ticketPage, /requestTicketDeletion\(ticketId\)[\s\S]*afterDirectDeletion/)
+})
+
+test('47. unassigned Ticket viewers can only request assignment for themselves', () => {
+  const assignment = selfAssignmentMigration.match(/create or replace function public\.request_crm_ticket_assignment[\s\S]*?end;\n\$\$;/)?.[0] ?? ''
+  assert.match(assignment, /crm_can_access_ticket\(p_ticket_id, 'tickets\.read'\)/)
+  assert.doesNotMatch(assignment, /crm_can_access_ticket\(p_ticket_id, 'tickets\.requests\.create'\)/)
+  assert.match(assignment, /requested_by_user_id[\s\S]*requested_assignee_id[\s\S]*actor[\s\S]*actor/)
+  assert.match(ticketPage, /maySelfAssign = can\(PERMISSIONS\.TICKETS_READ\)/)
+  assert.match(ticketPage, /mayRequest && <button className="button button-primary"/)
+})
+
+test('48. assignment state is scoped to the signed-in user', () => {
+  assert.match(ticketPage, /assignedUser\.id === user\?\.id/)
+  assert.match(ticketPage, /request\.requestedAssigneeId === user\?\.id/)
+  assert.match(ticketPage, /alreadyAssigned \? 'Already Assigned' : pendingAssignment \? 'Assignment Pending' : 'Assign to Me'/)
+})
+
+test('49. managers can add and remove Ticket assignees without replacing the team', () => {
+  const assignmentUpdate = assignmentManagementMigration.match(/create or replace function public\.update_crm_ticket_assignments[\s\S]*?end;\n\$\$;/)?.[0] ?? ''
+  assert.match(assignmentUpdate, /crm_can_access_ticket\(p_ticket_id, 'tickets\.requests\.review'\)/)
+  assert.match(assignmentUpdate, /on conflict \(ticket_id, user_id\) do update/)
+  assert.match(assignmentUpdate, /set removed_at = now\(\)/)
+  assert.doesNotMatch(assignmentUpdate, /delete from public\.crm_ticket_assignments/)
+  assert.match(caseTicketService, /updateAssignments/)
+})
+
+test('50. the Ticket header provides removable chips and a searchable multi-user picker', () => {
+  assert.match(ticketPage, /className="assignee-chip removable"/)
+  assert.match(ticketPage, /aria-label="Add assigned members"/)
+  assert.match(ticketPage, /<AssigneeManagerDialog/)
+  assert.match(assigneeManagerDialog, /Search users/)
+  assert.match(assigneeManagerDialog, /aria-multiselectable="true"/)
+  assert.match(assigneeManagerDialog, /Add selected/)
+})
+
+test('51. assignment changes are audited and notify affected users', () => {
+  assert.match(assignmentManagementMigration, /'ASSIGNEES_ADDED'/)
+  assert.match(assignmentManagementMigration, /'ASSIGNEES_REMOVED'/)
+  assert.match(assignmentManagementMigration, /'assignment_added'/)
+  assert.match(assignmentManagementMigration, /'assignment_removed'/)
 })

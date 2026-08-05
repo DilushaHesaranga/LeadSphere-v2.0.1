@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { PERMISSIONS } from '../auth/permissions.js'
+import { AssigneeManagerDialog } from '../components/AssigneeManagerDialog.jsx'
 import { ConfirmDialog } from '../components/ConfirmDialog.jsx'
 import { ContactMethodDialog } from '../components/ContactMethodDialog.jsx'
 import { DeletionRequestDialog } from '../components/DeletionRequestDialog.jsx'
 import { Icon } from '../components/Icons.jsx'
 import { ModalShell } from '../components/ModalShell.jsx'
 import { StatusBadge } from '../components/StatusBadge.jsx'
-import { contactMethods, formatDateTime, humanizeActivity, REQUEST_TYPES, requestLabel } from '../config/crm.js'
+import { contactMethods, formatDateTime, humanizeActivity, REQUEST_TYPES, requestLabel, TICKET_STAGES } from '../config/crm.js'
 import { caseTicketService } from '../services/caseTicketService.js'
 import { navigate } from '../utils/router.js'
 
@@ -30,7 +31,7 @@ function PostTicketDialog({ ticket, departments, direct, busy, onClose, onSubmit
     onSubmit(department, note)
   }
   return <ModalShell title="Post Ticket" kicker={direct ? 'Direct manager action' : 'Manager approval required'} onClose={onClose}>
-    <p>{direct ? 'This immediately transfers the Ticket. Transfers to Sales or Delivery also move lead-stage Tickets to Customers.' : <>The Ticket remains in <strong>{ticket.currentDepartment}</strong> until its responsible manager approves this request.</>}</p>
+    <p>{direct ? 'This immediately transfers departmental responsibility. The Ticket becomes customer work only when it reaches Sales Order.' : <>The Ticket remains in <strong>{ticket.currentDepartment}</strong> until its responsible manager approves this request.</>}</p>
     <form onSubmit={submit} noValidate>
       {error && <div className="alert alert-error" role="alert">{error}</div>}
       <label className="field"><span>Destination department</span><select value={department} onChange={(event) => { setDepartment(event.target.value); setError('') }}><option value="">Select department</option>{departments.filter((item) => item.slug !== ticket.currentDepartment).map((item) => <option key={item.slug} value={item.slug}>{item.name}</option>)}</select></label>
@@ -52,7 +53,7 @@ function TicketOverview({ ticket, reference, mayUpdate, busy, onSave }) {
     <div className="overview-grid">
       {mayUpdate && ticket.status === 'active' ? <form className="ticket-edit-form" onSubmit={(event) => { event.preventDefault(); onSave(form) }}>
         <label className="field"><span>Project title</span><input value={form.projectTitle} onChange={(event) => setForm({ ...form, projectTitle: event.target.value })}/></label>
-        <label className="field"><span>Stage</span><select value={form.stage} onChange={(event) => setForm({ ...form, stage: event.target.value })}>{reference.stages.map((stage) => <option key={stage.slug} value={stage.slug}>{stage.name}</option>)}</select></label>
+        <label className="field"><span>Stage</span><select value={form.stage} onChange={(event) => setForm({ ...form, stage: event.target.value })}>{reference.stages.map((stage) => <option key={stage.slug} value={stage.slug}>{stage.name}</option>)}</select><small>{reference.stages.find((stage) => stage.slug === form.stage)?.description}</small></label>
         <label className="field"><span>Responsible manager</span><select value={managerIsEligible ? form.responsibleManagerId : ''} onChange={(event) => setForm({ ...form, responsibleManagerId: event.target.value })}><option value="">Select Sales or Delivery Manager</option>{eligibleManagers.map((manager) => <option key={manager.id} value={manager.id}>{manager.name} · {manager.roleSlug === 'sales_manager' ? 'Sales' : 'Delivery'}</option>)}</select>{!managerIsEligible && <small className="field-error">The existing manager is no longer eligible. Select a Sales or Delivery Manager before saving.</small>}</label>
         <button className="button button-secondary button-small" disabled={busy || form.projectTitle.trim().length < 2 || !managerIsEligible}>Save updates</button>
       </form> : <dl className="overview-list"><div><dt>Project title</dt><dd>{ticket.projectTitle}</dd></div><div><dt>Stage</dt><dd><StatusBadge value={ticket.stage} kind="stage"/></dd></div></dl>}
@@ -82,7 +83,7 @@ function PlaceholderTab({ title, copy }) {
 }
 
 export function TicketDetailPage({ ticketId }) {
-  const { can } = useAuth()
+  const { can, user } = useAuth()
   const tabRefs = useRef([])
   const [activeTab, setActiveTab] = useState('overview')
   const [ticket, setTicket] = useState(null)
@@ -95,8 +96,11 @@ export function TicketDetailPage({ ticketId }) {
   const [contactDialog, setContactDialog] = useState('')
   const [postOpen, setPostOpen] = useState(false)
   const [confirmAction, setConfirmAction] = useState('')
+  const [assignmentDialog, setAssignmentDialog] = useState(false)
+  const [removeAssignee, setRemoveAssignee] = useState(null)
   const mayUpdate = can(PERMISSIONS.TICKETS_UPDATE)
   const mayNote = can(PERMISSIONS.TICKET_NOTES_CREATE)
+  const maySelfAssign = can(PERMISSIONS.TICKETS_READ)
   const mayRequest = can(PERMISSIONS.TICKET_REQUESTS_CREATE)
   const mayDirectManage = can(PERMISSIONS.TICKET_REQUESTS_REVIEW)
   const mayClose = can(PERMISSIONS.TICKETS_CLOSE)
@@ -107,7 +111,7 @@ export function TicketDetailPage({ ticketId }) {
     setLoading(true); setError('')
     try {
       const [ticketData, referenceData] = await Promise.all([caseTicketService.getTicket(ticketId), caseTicketService.getReferenceData()])
-      setTicket(ticketData); setReference(referenceData)
+      setTicket(ticketData); setReference({ ...referenceData, stages: referenceData.stages?.map((stage) => ({ ...TICKET_STAGES.find((item) => item.slug === stage.slug), ...stage })) ?? TICKET_STAGES })
     } catch (loadError) { setError(loadError.message) }
     finally { setLoading(false) }
   }, [ticketId])
@@ -152,7 +156,8 @@ export function TicketDetailPage({ ticketId }) {
   if (!ticket) return <div className="console-content"><div className="alert alert-error" role="alert">{error || 'Ticket not found.'}<button className="text-button" onClick={load}>Retry</button></div></div>
   const emails = contactMethods(ticket.contacts, 'email')
   const phones = contactMethods(ticket.contacts, 'phone')
-  const pendingAssignment = ticket.requests.some((request) => request.requestType === REQUEST_TYPES.ASSIGN_TO_ME && request.status === 'PENDING')
+  const alreadyAssigned = ticket.assignedUsers.some((assignedUser) => assignedUser.id === user?.id)
+  const pendingAssignment = ticket.requests.some((request) => request.requestType === REQUEST_TYPES.ASSIGN_TO_ME && request.requestedAssigneeId === user?.id && request.status === 'PENDING')
   const pendingPost = ticket.requests.some((request) => request.requestType === REQUEST_TYPES.POST_TICKET && request.status === 'PENDING')
   const pendingDeletion = ticket.requests.some((request) => request.requestType === REQUEST_TYPES.DELETE_TICKET && request.status === 'PENDING')
   const active = ticket.status === 'active'
@@ -164,13 +169,13 @@ export function TicketDetailPage({ ticketId }) {
         <span className="section-kicker">Ticket {ticket.id.slice(0, 8)}</span>
         <h1>{ticket.projectTitle}</h1>
         <p>{ticket.companyName} · Managed by {ticket.responsibleManagerName}</p>
-        <p className="ticket-assignees">Assigned: {ticket.assignedUsers.map((user) => user.name).join(', ') || 'No active assignments'}</p>
+        <div className="ticket-assignees"><span>Assigned:</span><div>{ticket.assignedUsers.map((assignedUser) => mayDirectManage && active ? <button key={assignedUser.id} type="button" className="assignee-chip removable" onClick={() => setRemoveAssignee(assignedUser)} aria-label={`Remove ${assignedUser.name} from this Ticket`}><Icon name="close" size={13}/><span>{assignedUser.name}</span></button> : <span key={assignedUser.id} className="assignee-chip">{assignedUser.name}</span>)}{!ticket.assignedUsers.length && <span className="no-assignees">No active assignments</span>}{mayDirectManage && active && <button type="button" className="assignee-chip add" onClick={() => setAssignmentDialog(true)} aria-label="Add assigned members"><Icon name="plus" size={14}/><span>Add</span></button>}</div></div>
         <div className="ticket-badges"><StatusBadge value={ticket.stage} kind="stage"/><StatusBadge value={ticket.status}/><StatusBadge value={ticket.currentDepartment} kind="department"/></div>
       </div>
       <div className="ticket-primary-actions">
         <button className="button button-secondary" disabled={!emails.length} onClick={() => openContact('email')} title={!emails.length ? 'No email address is available' : ''}><Icon name="mail" size={17}/>Email</button>
         <button className="button button-secondary" disabled={!phones.length} onClick={() => openContact('phone')} title={!phones.length ? 'No phone number is available' : ''}><Icon name="phone" size={17}/>Call</button>
-        {mayRequest && <button className="button button-secondary" disabled={!active || pendingAssignment} onClick={() => setConfirmAction('assign')}><Icon name="users" size={17}/>{pendingAssignment ? 'Assignment Pending' : 'Assign to Me'}</button>}
+        {maySelfAssign && <button className="button button-secondary" disabled={!active || alreadyAssigned || pendingAssignment} onClick={() => setConfirmAction('assign')}><Icon name="users" size={17}/>{alreadyAssigned ? 'Already Assigned' : pendingAssignment ? 'Assignment Pending' : 'Assign to Me'}</button>}
         {mayRequest && <button className="button button-primary" disabled={!active || pendingPost} onClick={() => setPostOpen(true)}><Icon name="send" size={17}/>{pendingPost ? 'Transfer Pending' : 'Post Ticket'}</button>}
         {(mayClose || mayDelete) && <details className="ticket-action-menu"><summary className="button button-secondary" aria-label="More Ticket actions">More</summary><div>{mayClose && <button disabled={!active} onClick={() => setConfirmAction('close')}><Icon name="lock" size={16}/>Close Ticket</button>}{mayDelete && <button className="danger-text" disabled={pendingDeletion} onClick={() => setConfirmAction('delete')}><Icon name="trash" size={16}/>{pendingDeletion ? 'Deletion Pending' : 'Delete Ticket'}</button>}</div></details>}
       </div>
@@ -188,7 +193,19 @@ export function TicketDetailPage({ ticketId }) {
       {activeTab === 'timeline' && <PlaceholderTab title="Timeline" copy="A unified customer timeline is planned for a future release. No additional data is loaded for this placeholder."/>}
     </div>
     {contactDialog && <ContactMethodDialog contacts={ticket.contacts} type={contactDialog} onClose={() => setContactDialog('')}/>} 
-    {postOpen && <PostTicketDialog ticket={ticket} departments={reference.departments} direct={mayDirectManage} busy={busy} onClose={() => setPostOpen(false)} onSubmit={(department, requestNote) => execute(() => caseTicketService.requestPost(ticketId, department, requestNote), (result) => result?.mode === 'direct' ? `Ticket transferred to ${department}${result.businessArea === 'customers' ? ' and moved to Customers' : ''}.` : 'Post Ticket request submitted to the responsible manager.')}/>}
+    {assignmentDialog && <AssigneeManagerDialog
+      users={reference.assignees ?? []}
+      assignedUserIds={ticket.assignedUsers.map((assignedUser) => assignedUser.id)}
+      busy={busy}
+      onClose={() => setAssignmentDialog(false)}
+      onAdd={(userIds) => execute(
+        () => caseTicketService.updateAssignments(ticketId, { addUserIds: userIds }),
+        `${userIds.length} ${userIds.length === 1 ? 'member' : 'members'} added to the Ticket.`,
+        async () => { setAssignmentDialog(false); await load() },
+      )}
+    />}
+    {removeAssignee && <ConfirmDialog title="Remove assigned member" confirmLabel="Remove member" danger busy={busy} onClose={() => setRemoveAssignee(null)} onConfirm={() => execute(() => caseTicketService.updateAssignments(ticketId, { removeUserIds: [removeAssignee.id] }), `${removeAssignee.name} was removed from the Ticket.`, async () => { setRemoveAssignee(null); await load() })}><p>Remove <strong>{removeAssignee.name}</strong> from this Ticket?</p><p>The assignment change will be recorded in the Ticket activity.</p></ConfirmDialog>}
+    {postOpen && <PostTicketDialog ticket={ticket} departments={reference.departments} direct={mayDirectManage} busy={busy} onClose={() => setPostOpen(false)} onSubmit={(department, requestNote) => execute(() => caseTicketService.requestPost(ticketId, department, requestNote), (result) => result?.mode === 'direct' ? `Ticket transferred to ${department}.` : 'Post Ticket request submitted to the responsible manager.')}/>}
     {confirmAction === 'assign' && <ConfirmDialog title="Assign to Me" confirmLabel={mayDirectManage ? 'Confirm assignment' : 'Submit request'} busy={busy} onClose={() => setConfirmAction('')} onConfirm={() => execute(() => caseTicketService.requestAssignment(ticketId), (result) => result?.mode === 'direct' ? 'You are now assigned to this Ticket.' : 'Assign to Me request submitted to the responsible manager.')}><p>{mayDirectManage ? <>You have manager authority, so this assigns <strong>you</strong> immediately and records the action.</> : <>This sends a permission request to <strong>{ticket.responsibleManagerName}</strong>. You will not be assigned until it is approved.</>}</p></ConfirmDialog>}
     {confirmAction === 'close' && <ConfirmDialog title="Close Ticket" confirmLabel="Close Ticket" busy={busy} onClose={() => setConfirmAction('')} onConfirm={() => execute(() => caseTicketService.closeTicket(ticketId), 'Ticket closed. Its history and notes were preserved.')}><p>Close <strong>{ticket.projectTitle}</strong> for {ticket.companyName}?</p><p>Working actions will be disabled, but the Ticket remains viewable in history.</p></ConfirmDialog>}
     {confirmAction === 'delete' && (mayDirectDelete ? <ConfirmDialog title="Delete Ticket" confirmLabel="Delete Ticket" danger busy={busy} onClose={() => setConfirmAction('')} onConfirm={() => execute(() => caseTicketService.requestTicketDeletion(ticketId), (result) => result?.mode === 'direct' ? 'Ticket archived.' : 'Delete Ticket request submitted.', afterDirectDeletion)}><p>Archive <strong>{ticket.projectTitle}</strong> now?</p><p>This direct manager action preserves the audit trail and cannot be undone from the application.</p></ConfirmDialog> : <DeletionRequestDialog kind="ticket" name={ticket.projectTitle} companyName={ticket.companyName} responsibleManagerName={ticket.responsibleManagerName} busy={busy} onClose={() => setConfirmAction('')} onSubmit={({ note: requestNote }) => execute(() => caseTicketService.requestTicketDeletion(ticketId, requestNote), 'Delete Ticket request submitted to the responsible manager.')}/>) }

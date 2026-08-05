@@ -5,13 +5,13 @@ export const DEPARTMENTS = Object.freeze([
 ])
 
 export const TICKET_STAGES = Object.freeze([
-  { slug: 'new', name: 'New', businessArea: 'leads' },
-  { slug: 'open', name: 'Open', businessArea: 'leads' },
-  { slug: 'qualified', name: 'Qualified', businessArea: 'customers' },
-  { slug: 'proposal', name: 'Proposal', businessArea: 'customers' },
-  { slug: 'won', name: 'Won', businessArea: 'customers' },
-  { slug: 'delivery', name: 'Delivery', businessArea: 'customers' },
-  { slug: 'closed_lost', name: 'Closed Lost', businessArea: 'customers' },
+  { slug: 'qualification', name: 'Qualification', businessArea: 'leads', description: 'Select the most viable deals and engage them.' },
+  { slug: 'proposal_or_price_quote', name: 'Proposal or Price Quote', businessArea: 'leads', description: 'Discuss the proposal and budget, then sign off on compliance, IT, or onboarding requirements.' },
+  { slug: 'negotiation', name: 'Negotiation', businessArea: 'leads', description: 'Revisit the quote, decide the final price, and sign the contract.' },
+  { slug: 'sales_order', name: 'Sales Order', businessArea: 'customers', description: 'Create the sales order and finalize the dispatch details. The lead becomes a customer at this stage.' },
+  { slug: 'payment', name: 'Payment', businessArea: 'customers', description: 'Deliver the order and receive payment.' },
+  { slug: 'close_won', name: 'Close won', businessArea: 'customers', description: 'The deal is won and the customer details are saved for future business.' },
+  { slug: 'lost', name: 'Lost', businessArea: 'customers', description: 'The deal is lost and the customer may or may not be contacted for future business.' },
 ])
 
 export const REQUEST_TYPES = Object.freeze({
@@ -33,6 +33,10 @@ const MANAGER_ROLES = new Set([
 
 export function ticketBusinessArea(stage) {
   return TICKET_STAGES.find((item) => item.slug === stage)?.businessArea ?? 'customers'
+}
+
+export function ticketStage(stage) {
+  return TICKET_STAGES.find((item) => item.slug === stage) ?? null
 }
 
 export function getDefaultDepartment(roles = []) {

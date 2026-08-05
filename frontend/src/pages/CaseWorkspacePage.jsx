@@ -73,7 +73,7 @@ export function CaseWorkspacePage({ area }) {
   const areaStages = (reference.stages ?? TICKET_STAGES).filter((stage) => stage.businessArea === area)
   return (
     <div className="console-content crm-workspace">
-      <div className="page-heading crm-heading"><div><span className="section-kicker">Case & Ticket Management</span><h1>{title}</h1><p>{area === 'leads' ? 'New and Open Tickets, organised by company Case.' : 'Qualified and later-stage customer work, organised by company Case.'}</p></div>{mayCreate && <button className="button button-primary" type="button" onClick={() => setCreation({})}><Icon name="plus" size={18}/>Create Ticket</button>}</div>
+      <div className="page-heading crm-heading"><div><span className="section-kicker">Case & Ticket Management</span><h1>{title}</h1><p>{area === 'leads' ? 'Qualification through Negotiation, organised by company Case.' : 'Sales Order through completion, organised by company Case.'}</p></div>{mayCreate && <button className="button button-primary" type="button" onClick={() => setCreation({})}><Icon name="plus" size={18}/>Create Ticket</button>}</div>
       {error && <div className="alert alert-error" role="alert">{error}<button className="text-button" onClick={load}>Retry</button></div>}
       {success && <div className="alert alert-success" role="status">{success}</div>}
       <section className="filter-panel" aria-label={`${title} filters`}>
