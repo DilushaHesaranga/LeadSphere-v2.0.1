@@ -14,11 +14,13 @@ import { CaseWorkspacePage } from './CaseWorkspacePage.jsx'
 import { CaseDetailPage } from './CaseDetailPage.jsx'
 import { PermissionsPage } from './PermissionsPage.jsx'
 import { TicketDetailPage } from './TicketDetailPage.jsx'
+import { FollowUpsPage } from './FollowUpsPage.jsx'
 
 const baseNavigation = [
   { path: '/console', label: 'Overview', icon: 'grid', exact: true },
   { path: '/console/leads', label: 'Leads', icon: 'lead', anyPermission: [PERMISSIONS.LEADS_READ, PERMISSIONS.TICKETS_READ] },
   { path: '/console/customers', label: 'Customers', icon: 'users', anyPermission: [PERMISSIONS.ACCOUNTS_READ, PERMISSIONS.CUSTOMER_CONTEXT_READ, PERMISSIONS.TICKETS_READ] },
+  { path: '/console/follow-ups', label: 'Follow Ups', icon: 'calendar', permission: PERMISSIONS.TICKETS_READ },
   { path: '/console/cases', label: 'Cases', icon: 'file' },
   { path: '/console/timeline', label: 'Timeline', icon: 'timeline' },
   { path: '/console/pipeline', label: 'Pipeline', icon: 'briefcase', permission: PERMISSIONS.PIPELINE_READ },
@@ -121,6 +123,7 @@ export function ConsolePage({ pathname }) {
   else if (pathname === '/console') content = <Overview profile={profile} roles={roles}/>
   else if (pathname === '/console/leads') content = <CaseWorkspacePage area="leads" />
   else if (pathname === '/console/customers') content = <CaseWorkspacePage area="customers" />
+  else if (pathname === '/console/follow-ups') content = <FollowUpsPage />
   else if (pathname === '/console/permissions') content = <PermissionsPage />
   else if (pathname === '/console/team') content = <TeamManagementPage />
   else if (isCaseRoute) content = <CaseDetailPage caseId={pathname.split('/').at(-1)} />

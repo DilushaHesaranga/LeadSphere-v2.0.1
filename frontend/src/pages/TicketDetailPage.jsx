@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { PERMISSIONS } from '../auth/permissions.js'
 import { AssigneeManagerDialog } from '../components/AssigneeManagerDialog.jsx'
+import { FollowUpWorkspace } from '../components/FollowUpWorkspace.jsx'
 import { ConfirmDialog } from '../components/ConfirmDialog.jsx'
 import { ContactMethodDialog } from '../components/ContactMethodDialog.jsx'
 import { DeletionRequestDialog } from '../components/DeletionRequestDialog.jsx'
@@ -18,6 +19,7 @@ const TICKET_TABS = Object.freeze([
   ['notes', 'Notes'],
   ['activity', 'Activity'],
   ['permissions', 'Permissions'],
+  ['follow-ups', 'Follow Ups'],
   ['timeline', 'Timeline'],
 ])
 
@@ -190,6 +192,7 @@ export function TicketDetailPage({ ticketId }) {
       {activeTab === 'notes' && <NotesTab ticket={ticket} mayNote={mayNote} active={active} note={note} setNote={setNote} busy={busy} onSubmit={addNote}/>}
       {activeTab === 'activity' && <ActivityTab ticket={ticket}/>}
       {activeTab === 'permissions' && <PermissionsTab ticket={ticket}/>}
+      {activeTab === 'follow-ups' && <FollowUpWorkspace ticket={ticket}/>}
       {activeTab === 'timeline' && <PlaceholderTab title="Timeline" copy="A unified customer timeline is planned for a future release. No additional data is loaded for this placeholder."/>}
     </div>
     {contactDialog && <ContactMethodDialog contacts={ticket.contacts} type={contactDialog} onClose={() => setContactDialog('')}/>} 
