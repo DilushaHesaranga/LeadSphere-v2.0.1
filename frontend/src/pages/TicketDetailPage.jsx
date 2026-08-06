@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthContext.jsx'
 import { PERMISSIONS } from '../auth/permissions.js'
 import { AssigneeManagerDialog } from '../components/AssigneeManagerDialog.jsx'
 import { FollowUpWorkspace } from '../components/FollowUpWorkspace.jsx'
+import { TimelineWorkspace } from '../components/TimelineWorkspace.jsx'
 import { ConfirmDialog } from '../components/ConfirmDialog.jsx'
 import { ContactMethodDialog } from '../components/ContactMethodDialog.jsx'
 import { DeletionRequestDialog } from '../components/DeletionRequestDialog.jsx'
@@ -11,6 +12,7 @@ import { ModalShell } from '../components/ModalShell.jsx'
 import { StatusBadge } from '../components/StatusBadge.jsx'
 import { contactMethods, formatDateTime, humanizeActivity, REQUEST_TYPES, requestLabel, TICKET_STAGES } from '../config/crm.js'
 import { caseTicketService } from '../services/caseTicketService.js'
+import { timelineService } from '../services/timelineService.js'
 import { navigate } from '../utils/router.js'
 
 const TICKET_TABS = Object.freeze([
@@ -80,10 +82,6 @@ function PermissionsTab({ ticket }) {
   return <section className="detail-panel" aria-labelledby="permissions-heading"><div className="panel-heading"><div><h2 id="permissions-heading">Permission Requests</h2><p>Assignment, transfer, and deletion decisions</p></div></div><div className="history-list">{ticket.requests.map((request) => <article className="history-row" key={request.id}><span className="history-icon"><Icon name={request.requestType === REQUEST_TYPES.ASSIGN_TO_ME ? 'users' : request.requestType === REQUEST_TYPES.DELETE_TICKET ? 'trash' : 'send'} size={17}/></span><div><strong>{requestLabel(request.requestType)}</strong><p>{request.requestType === REQUEST_TYPES.DELETE_TICKET ? 'Requested Ticket deletion' : request.requestedDepartment ? `Requested ${request.requestedDepartment}` : 'Requested assignment'}{request.requestNote ? ` · ${request.requestNote}` : ''}</p><time>{formatDateTime(request.createdAt)}</time></div><StatusBadge value={request.status} kind="request"/></article>)}{!ticket.requests.length && <div className="compact-empty">No permission requests.</div>}</div></section>
 }
 
-function PlaceholderTab({ title, copy }) {
-  return <section className="detail-panel placeholder-panel"><Icon name="activity" size={28}/><h2>{title}</h2><p>{copy}</p></section>
-}
-
 export function TicketDetailPage({ ticketId }) {
   const { can, user } = useAuth()
   const tabRefs = useRef([])
@@ -130,9 +128,18 @@ export function TicketDetailPage({ ticketId }) {
     } catch (operationError) { setError(operationError.message); return null }
     finally { setBusy(false) }
   }
-  const openContact = (type) => {
+  const launchContact = async (type, method, propagateError = false) => {
+    setBusy(true); setError('')
+    try {
+      await timelineService.recordCommunicationLaunch(ticketId, type === 'email' ? 'EMAIL' : 'CALL', method)
+      window.dispatchEvent(new Event('leadsphere:timeline-changed'))
+      window.location.href = `${type === 'email' ? 'mailto' : 'tel'}:${method.value}`
+    } catch (launchError) { setError(launchError.message); if (propagateError) throw launchError }
+    finally { setBusy(false) }
+  }
+  const openContact = async (type) => {
     const methods = contactMethods(ticket.contacts, type)
-    if (methods.length === 1) window.location.href = `${type === 'email' ? 'mailto' : 'tel'}:${methods[0].value}`
+    if (methods.length === 1) await launchContact(type, methods[0])
     else if (methods.length > 1) setContactDialog(type)
   }
   const addNote = async (event) => {
@@ -193,9 +200,9 @@ export function TicketDetailPage({ ticketId }) {
       {activeTab === 'activity' && <ActivityTab ticket={ticket}/>}
       {activeTab === 'permissions' && <PermissionsTab ticket={ticket}/>}
       {activeTab === 'follow-ups' && <FollowUpWorkspace ticket={ticket}/>}
-      {activeTab === 'timeline' && <PlaceholderTab title="Timeline" copy="A unified customer timeline is planned for a future release. No additional data is loaded for this placeholder."/>}
+      {activeTab === 'timeline' && <TimelineWorkspace ticket={ticket}/>}
     </div>
-    {contactDialog && <ContactMethodDialog contacts={ticket.contacts} type={contactDialog} onClose={() => setContactDialog('')}/>} 
+    {contactDialog && <ContactMethodDialog contacts={ticket.contacts} type={contactDialog} onClose={() => setContactDialog('')} onSelect={(method) => launchContact(contactDialog, method, true)}/>}
     {assignmentDialog && <AssigneeManagerDialog
       users={reference.assignees ?? []}
       assignedUserIds={ticket.assignedUsers.map((assignedUser) => assignedUser.id)}

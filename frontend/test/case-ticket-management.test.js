@@ -299,11 +299,11 @@ test('43. tab keyboard navigation and mobile horizontal scrolling are supported'
   assert.match(styles, /@media \(max-width:760px\)[\s\S]*\.ticket-primary-actions[\s\S]*overflow-x:auto/)
 })
 
-test('44. Cases is global while the separate Ticket Timeline remains query-free', () => {
+test('44. Cases is global while Ticket Timeline uses its dedicated workspace', () => {
   assert.match(consolePage, /path: '\/console\/cases', label: 'Cases'/)
   assert.match(consolePage, /path: '\/console\/timeline', label: 'Timeline'/)
-  assert.match(ticketPage, /activeTab === 'timeline'.*<PlaceholderTab/)
-  assert.doesNotMatch(caseTicketService, /(getRelatedCases|getTimeline)/)
+  assert.match(ticketPage, /activeTab === 'timeline'.*<TimelineWorkspace ticket=\{ticket\}/)
+  assert.doesNotMatch(caseTicketService, /getRelatedCases/)
 })
 
 test('45. responsible manager editing uses the eligible reference list', () => {

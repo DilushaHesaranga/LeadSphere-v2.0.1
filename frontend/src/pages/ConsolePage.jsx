@@ -15,6 +15,7 @@ import { CaseDetailPage } from './CaseDetailPage.jsx'
 import { PermissionsPage } from './PermissionsPage.jsx'
 import { TicketDetailPage } from './TicketDetailPage.jsx'
 import { FollowUpsPage } from './FollowUpsPage.jsx'
+import { TimelinePage } from './TimelinePage.jsx'
 
 const baseNavigation = [
   { path: '/console', label: 'Overview', icon: 'grid', exact: true },
@@ -31,7 +32,6 @@ const baseNavigation = [
 
 const placeholderContent = {
   '/console/cases': ['Cases', 'Cases functionality will be available in a future update.'],
-  '/console/timeline': ['Timeline', 'Timeline functionality will be available in a future update.'],
   '/console/pipeline': ['Pipeline', 'Deal stages and authorized pipeline reporting will appear here.'],
   '/console/activity': ['Activity', 'Calls, notes, tasks, and customer touchpoints will appear here.'],
 }
@@ -124,6 +124,7 @@ export function ConsolePage({ pathname }) {
   else if (pathname === '/console/leads') content = <CaseWorkspacePage area="leads" />
   else if (pathname === '/console/customers') content = <CaseWorkspacePage area="customers" />
   else if (pathname === '/console/follow-ups') content = <FollowUpsPage />
+  else if (pathname === '/console/timeline') content = <TimelinePage />
   else if (pathname === '/console/permissions') content = <PermissionsPage />
   else if (pathname === '/console/team') content = <TeamManagementPage />
   else if (isCaseRoute) content = <CaseDetailPage caseId={pathname.split('/').at(-1)} />
