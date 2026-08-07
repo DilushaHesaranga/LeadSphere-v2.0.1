@@ -66,6 +66,26 @@ test('notification center refreshes, supports read state, and opens linked recor
   assert.match(notificationCenter, /navigate\(notification\.link\)/)
 })
 
+test('new notifications play one chime and show a deduplicated bottom-right preview', () => {
+  assert.match(notificationCenter, /playNotificationChime/)
+  assert.match(notificationCenter, /createOscillator/)
+  assert.match(notificationCenter, /initialLoadCompleteRef/)
+  assert.match(notificationCenter, /knownNotificationIdsRef/)
+  assert.match(notificationCenter, /navigator\.locks\?\.request/)
+  assert.match(notificationCenter, /createPortal\(/)
+  assert.match(notificationCenter, /notification-preview-stack/)
+  assert.match(notificationCenter, /PREVIEW_DURATION_MS/)
+  assert.match(styles, /\.notification-preview-stack \{[^}]*position:fixed;right:24px;bottom:24px/)
+  assert.match(styles, /@media \(max-width:430px\)[\s\S]*\.notification-preview-stack/)
+})
+
+test('notification previews are accessible, dismissible, and open their linked record', () => {
+  assert.match(notificationCenter, /aria-live="polite"/)
+  assert.match(notificationCenter, /aria-label=\{`Dismiss \$\{notification\.title\}`\}/)
+  assert.match(notificationCenter, /onClick=\{\(\) => openNotification\(notification\)\}/)
+  assert.match(notificationCenter, /dismissPreview\(notification\.id\)/)
+})
+
 test('notification panel is responsive and empty modules use full available width', () => {
   assert.match(styles, /\.notification-panel[\s\S]*max-height/)
   assert.match(styles, /@media \(max-width:430px\)[\s\S]*\.notification-panel/)
