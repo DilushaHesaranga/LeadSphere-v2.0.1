@@ -12,7 +12,9 @@ import { ModalShell } from '../components/ModalShell.jsx'
 import { StatusBadge } from '../components/StatusBadge.jsx'
 import { contactMethods, formatDateTime, humanizeActivity, REQUEST_TYPES, requestLabel, TICKET_STAGES } from '../config/crm.js'
 import { caseTicketService } from '../services/caseTicketService.js'
+import { pipelineService } from '../services/pipelineService.js'
 import { timelineService } from '../services/timelineService.js'
+import { formatStageDuration } from '../config/pipeline.js'
 import { navigate } from '../utils/router.js'
 
 const TICKET_TABS = Object.freeze([
@@ -45,7 +47,7 @@ function PostTicketDialog({ ticket, departments, direct, busy, onClose, onSubmit
   </ModalShell>
 }
 
-function TicketOverview({ ticket, reference, mayUpdate, busy, onSave }) {
+function TicketOverview({ ticket, reference, mayUpdate, mayMoveStage, busy, onSave }) {
   const [form, setForm] = useState({ projectTitle: ticket.projectTitle, stage: ticket.stage, responsibleManagerId: ticket.responsibleManagerId })
   const eligibleManagers = reference.managers.filter((manager) => (
     ticket.currentDepartment === 'sales' ? manager.roleSlug === 'sales_manager'
@@ -57,7 +59,7 @@ function TicketOverview({ ticket, reference, mayUpdate, busy, onSave }) {
     <div className="overview-grid">
       {mayUpdate && ticket.status === 'active' ? <form className="ticket-edit-form" onSubmit={(event) => { event.preventDefault(); onSave(form) }}>
         <label className="field"><span>Project title</span><input value={form.projectTitle} onChange={(event) => setForm({ ...form, projectTitle: event.target.value })}/></label>
-        <label className="field"><span>Stage</span><select value={form.stage} onChange={(event) => setForm({ ...form, stage: event.target.value })}>{reference.stages.map((stage) => <option key={stage.slug} value={stage.slug}>{stage.name}</option>)}</select><small>{reference.stages.find((stage) => stage.slug === form.stage)?.description}</small></label>
+        <label className="field"><span>Stage</span><select value={form.stage} disabled={!mayMoveStage} onChange={(event) => setForm({ ...form, stage: event.target.value })}>{reference.stages.map((stage) => <option key={stage.slug} value={stage.slug}>{stage.name}</option>)}</select><small>{mayMoveStage ? reference.stages.find((stage) => stage.slug === form.stage)?.description : 'Your role can edit Ticket details but cannot move pipeline stages.'}</small></label>
         <label className="field"><span>Responsible manager</span><select value={managerIsEligible ? form.responsibleManagerId : ''} onChange={(event) => setForm({ ...form, responsibleManagerId: event.target.value })}><option value="">Select Sales or Delivery Manager</option>{eligibleManagers.map((manager) => <option key={manager.id} value={manager.id}>{manager.name} · {manager.roleSlug === 'sales_manager' ? 'Sales' : 'Delivery'}</option>)}</select>{!managerIsEligible && <small className="field-error">The existing manager is no longer eligible. Select a Sales or Delivery Manager before saving.</small>}</label>
         <button className="button button-secondary button-small" disabled={busy || form.projectTitle.trim().length < 2 || !managerIsEligible}>Save updates</button>
       </form> : <dl className="overview-list"><div><dt>Project title</dt><dd>{ticket.projectTitle}</dd></div><div><dt>Stage</dt><dd><StatusBadge value={ticket.stage} kind="stage"/></dd></div></dl>}
@@ -74,8 +76,22 @@ function NotesTab({ ticket, mayNote, active, note, setNote, busy, onSubmit }) {
   return <section className="detail-panel" aria-labelledby="notes-heading"><div className="panel-heading"><div><h2 id="notes-heading">Notes</h2><p>Shared with authorised Ticket users</p></div></div>{mayNote && active && <form className="note-form" onSubmit={onSubmit}><label className="sr-only" htmlFor="new-ticket-note">Add Note</label><textarea id="new-ticket-note" rows="3" maxLength="5000" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Add a shared note..."/><button className="button button-primary button-small" disabled={busy || !note.trim()}><Icon name="plus" size={16}/>Add Note</button></form>}<div className="note-list">{ticket.notes.map((item) => <article className="note-card" key={item.id}><header><strong>{item.authorName}</strong><time>{formatDateTime(item.createdAt)}</time></header><p>{item.content}</p></article>)}{!ticket.notes.length && <div className="compact-empty">No notes have been added.</div>}</div></section>
 }
 
-function ActivityTab({ ticket }) {
-  return <section className="detail-panel" aria-labelledby="activity-heading"><div className="panel-heading"><div><h2 id="activity-heading">Activity</h2><p>Immutable Ticket workflow history</p></div></div><div className="history-list">{ticket.activity.map((activity) => <article className="history-row" key={activity.id}><span className="history-icon"><Icon name="activity" size={17}/></span><div><strong>{humanizeActivity(activity.action)}</strong><p>{activity.actorName}</p><time>{formatDateTime(activity.createdAt)}</time></div></article>)}</div></section>
+function ActivityTab({ ticket, stageHistory, historyLoading, historyError, onRetry }) {
+  const otherActivity = ticket.activity.filter((activity) => activity.action !== 'STAGE_CHANGED')
+  return <section className="detail-panel" aria-labelledby="activity-heading">
+    <div className="panel-heading"><div><h2 id="activity-heading">Activity</h2><p>Immutable Ticket workflow and stage history</p></div></div>
+    <div className="stage-history-section">
+      <header><div><span className="section-kicker">Pipeline audit</span><h3>Stage history</h3></div><small>{stageHistory.length} {stageHistory.length === 1 ? 'entry' : 'entries'}</small></header>
+      {historyLoading && <div className="compact-empty">Loading stage history...</div>}
+      {historyError && <div className="alert alert-error" role="alert">{historyError}<button className="text-button" type="button" onClick={onRetry}>Retry</button></div>}
+      {!historyLoading && !historyError && <div className="stage-history-list">{stageHistory.map((entry) => <article className="stage-history-row" key={entry.id}>
+        <span className="history-icon"><Icon name="briefcase" size={16}/></span>
+        <div><strong>{entry.previousStageName ? `${entry.previousStageName} to ${entry.newStageName}` : `Entered ${entry.newStageName}`}</strong><p>{entry.changedByName} · {entry.newPipelineName} · {Number(entry.probabilitySnapshot)}% probability</p><time>{formatDateTime(entry.changedAt)}</time></div>
+        <dl><div><dt>Time in previous stage</dt><dd>{formatStageDuration(entry.durationSeconds)}</dd></div><div><dt>Source</dt><dd>{entry.source?.replaceAll('_', ' ')}</dd></div></dl>
+      </article>)}{!stageHistory.length && <div className="compact-empty">No stage transitions have been recorded.</div>}</div>}
+    </div>
+    <div className="activity-history-section"><header><h3>Other workflow activity</h3></header><div className="history-list">{otherActivity.map((activity) => <article className="history-row" key={activity.id}><span className="history-icon"><Icon name="activity" size={17}/></span><div><strong>{humanizeActivity(activity.action)}</strong><p>{activity.actorName}</p><time>{formatDateTime(activity.createdAt)}</time></div></article>)}{!otherActivity.length && <div className="compact-empty">No other workflow activity has been recorded.</div>}</div></div>
+  </section>
 }
 
 function PermissionsTab({ ticket }) {
@@ -98,7 +114,11 @@ export function TicketDetailPage({ ticketId }) {
   const [confirmAction, setConfirmAction] = useState('')
   const [assignmentDialog, setAssignmentDialog] = useState(false)
   const [removeAssignee, setRemoveAssignee] = useState(null)
+  const [stageHistory, setStageHistory] = useState([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyError, setHistoryError] = useState('')
   const mayUpdate = can(PERMISSIONS.TICKETS_UPDATE)
+  const mayMoveStage = can(PERMISSIONS.DEALS_MOVE_STAGE) || can(PERMISSIONS.LEADS_CHANGE_STATUS)
   const mayNote = can(PERMISSIONS.TICKET_NOTES_CREATE)
   const maySelfAssign = can(PERMISSIONS.TICKETS_READ)
   const mayRequest = can(PERMISSIONS.TICKET_REQUESTS_CREATE)
@@ -116,6 +136,14 @@ export function TicketDetailPage({ ticketId }) {
     finally { setLoading(false) }
   }, [ticketId])
   useEffect(() => { load() }, [load])
+
+  const loadStageHistory = useCallback(async () => {
+    setHistoryLoading(true); setHistoryError('')
+    try { setStageHistory(await pipelineService.getStageHistory(ticketId)) }
+    catch (loadError) { setHistoryError(loadError.message) }
+    finally { setHistoryLoading(false) }
+  }, [ticketId])
+  useEffect(() => { if (activeTab === 'activity') loadStageHistory() }, [activeTab, loadStageHistory])
 
   const execute = async (operation, message, after = load) => {
     setBusy(true); setError(''); setSuccess('')
@@ -194,10 +222,10 @@ export function TicketDetailPage({ ticketId }) {
     {!active && <div className="closed-notice"><Icon name="lock" size={18}/><span>This Ticket is {ticket.status}. Its contacts, notes, requests, and history remain available, but working actions are restricted.</span></div>}
     <nav className="ticket-tabs" role="tablist" aria-label="Ticket details">{TICKET_TABS.map(([slug, label], index) => <button key={slug} ref={(node) => { tabRefs.current[index] = node }} id={`ticket-tab-${slug}`} role="tab" aria-selected={activeTab === slug} aria-controls={`ticket-panel-${slug}`} tabIndex={activeTab === slug ? 0 : -1} className={activeTab === slug ? 'active' : ''} onClick={() => setActiveTab(slug)} onKeyDown={(event) => selectAdjacentTab(event, index)}>{label}</button>)}</nav>
     <div id={`ticket-panel-${activeTab}`} role="tabpanel" aria-labelledby={`ticket-tab-${activeTab}`} className="ticket-tab-panel">
-      {activeTab === 'overview' && <TicketOverview ticket={ticket} reference={reference} mayUpdate={mayUpdate} busy={busy} onSave={(input) => execute(() => caseTicketService.updateTicket(ticketId, input), 'Ticket updated.')}/>}
+      {activeTab === 'overview' && <TicketOverview ticket={ticket} reference={reference} mayUpdate={mayUpdate} mayMoveStage={mayMoveStage} busy={busy} onSave={(input) => execute(() => caseTicketService.updateTicket(ticketId, input), 'Ticket updated.')}/>}
       {activeTab === 'contacts' && <ContactsTab ticket={ticket}/>}
       {activeTab === 'notes' && <NotesTab ticket={ticket} mayNote={mayNote} active={active} note={note} setNote={setNote} busy={busy} onSubmit={addNote}/>}
-      {activeTab === 'activity' && <ActivityTab ticket={ticket}/>}
+      {activeTab === 'activity' && <ActivityTab ticket={ticket} stageHistory={stageHistory} historyLoading={historyLoading} historyError={historyError} onRetry={loadStageHistory}/>}
       {activeTab === 'permissions' && <PermissionsTab ticket={ticket}/>}
       {activeTab === 'follow-ups' && <FollowUpWorkspace ticket={ticket}/>}
       {activeTab === 'timeline' && <TimelineWorkspace ticket={ticket}/>}

@@ -24,6 +24,7 @@ Firebase Auth, Firebase databases, Firebase Functions, and Prisma are intentiona
    - `supabase/migrations/20260803000200_case_ticket_activity_hardening.sql`
    - `supabase/migrations/20260803000300_global_visibility_and_deletion_approval.sql`
    - `supabase/migrations/20260803000400_multi_assignee_ticket_creation.sql`
+   - Continue with every later migration in filename order, ending with `supabase/migrations/20260815000100_ticket_pipeline_board.sql`.
 3. In **Authentication > Providers > Email**, turn off public email sign-up. Administrator invitations continue to be created through the trusted server.
 4. In **Authentication > URL Configuration**, set the Site URL to the production Firebase Hosting URL and add these redirect URLs:
    - `http://localhost:5173/accept-invite`
@@ -32,7 +33,7 @@ Firebase Auth, Firebase databases, Firebase Functions, and Prisma are intentiona
    - `https://YOUR_FIREBASE_DOMAIN/reset-password`
 5. In **Authentication > Email Templates > Invite user**, paste `supabase/templates/invite.html`.
 
-The migrations create profiles, granular scoped permissions, teams, memberships, invitations, trusted authorization functions, the invitation-acceptance RPC, Case/Ticket workflows, and RLS policies. A recipient never selects their own role. The role stored in `public.invitations` by the trusted server is assigned atomically when the recipient accepts. The authorization matrix is in `docs/RBAC.md`; the Case/Ticket data model and department-manager setup are in `docs/CASE_TICKET_MANAGEMENT.md`.
+The migrations create profiles, granular scoped permissions, teams, memberships, invitations, trusted authorization functions, the invitation-acceptance RPC, Case/Ticket workflows, the Ticket pipeline and immutable stage history, and RLS policies. A recipient never selects their own role. The role stored in `public.invitations` by the trusted server is assigned atomically when the recipient accepts. The authorization matrix is in `docs/RBAC.md`; the Case/Ticket data model and department-manager setup are in `docs/CASE_TICKET_MANAGEMENT.md`; the pipeline design and rollout notes are in `docs/PIPELINE.md`.
 
 ## 2. Create the first System Admin
 

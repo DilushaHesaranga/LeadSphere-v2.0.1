@@ -5,13 +5,13 @@ export const DEPARTMENTS = Object.freeze([
 ])
 
 export const TICKET_STAGES = Object.freeze([
-  { slug: 'qualification', name: 'Qualification', businessArea: 'leads', description: 'Select the most viable deals and engage them.' },
-  { slug: 'proposal_or_price_quote', name: 'Proposal or Price Quote', businessArea: 'leads', description: 'Discuss the proposal and budget, then sign off on compliance, IT, or onboarding requirements.' },
-  { slug: 'negotiation', name: 'Negotiation', businessArea: 'leads', description: 'Revisit the quote, decide the final price, and sign the contract.' },
-  { slug: 'sales_order', name: 'Sales Order', businessArea: 'customers', description: 'Create the sales order and finalize the dispatch details. The lead becomes a customer at this stage.' },
-  { slug: 'payment', name: 'Payment', businessArea: 'customers', description: 'Deliver the order and receive payment.' },
-  { slug: 'close_won', name: 'Close won', businessArea: 'customers', description: 'The deal is won and the customer details are saved for future business.' },
-  { slug: 'lost', name: 'Lost', businessArea: 'customers', description: 'The deal is lost and the customer may or may not be contacted for future business.' },
+  { slug: 'qualification', name: 'Qualification', businessArea: 'leads', probability: 20, category: 'open', description: 'Select the most viable deals and engage them.' },
+  { slug: 'proposal_or_price_quote', name: 'Proposal or Price Quote', businessArea: 'leads', probability: 45, category: 'open', description: 'Discuss the proposal and budget, then sign off on compliance, IT, or onboarding requirements.' },
+  { slug: 'negotiation', name: 'Negotiation', businessArea: 'leads', probability: 70, category: 'open', description: 'Revisit the quote, decide the final price, and sign the contract.' },
+  { slug: 'sales_order', name: 'Sales Order', businessArea: 'customers', probability: 85, category: 'open', description: 'Create the sales order and finalize the dispatch details. The lead becomes a customer at this stage.' },
+  { slug: 'payment', name: 'Payment', businessArea: 'customers', probability: 90, category: 'open', description: 'Deliver the order and receive payment.' },
+  { slug: 'close_won', name: 'Close won', businessArea: 'customers', probability: 100, category: 'won', description: 'The deal is won and the customer details are saved for future business.' },
+  { slug: 'lost', name: 'Lost', businessArea: 'customers', probability: 0, category: 'lost', description: 'The deal is lost and the customer may or may not be contacted for future business.' },
 ])
 
 export const REQUEST_TYPES = Object.freeze({

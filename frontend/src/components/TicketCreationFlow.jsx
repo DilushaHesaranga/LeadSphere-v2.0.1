@@ -12,7 +12,7 @@ function FieldError({ children, id }) {
   return children ? <small id={id} className="field-error">{children}</small> : null
 }
 
-export function TicketCreationFlow({ area = 'leads', fixedCase = null, onClose, onCreated }) {
+export function TicketCreationFlow({ area = 'leads', pipelineId = '', initialStage = '', fixedCase = null, onClose, onCreated }) {
   const { can, roles } = useAuth()
   const defaultDepartment = getDefaultDepartment(roles)
   const maySelectDepartment = canSelectInitialDepartment(roles)
@@ -26,7 +26,7 @@ export function TicketCreationFlow({ area = 'leads', fixedCase = null, onClose, 
   const [reference, setReference] = useState({ departments: DEPARTMENTS, stages: TICKET_STAGES, managers: [], assignees: [], departmentManagers: [] })
   const [ticket, setTicket] = useState({
     projectTitle: '', currentDepartment: defaultDepartment,
-    stage: area === 'leads' ? 'qualification' : 'sales_order', responsibleManagerId: '', assigneeIds: [], contacts: [emptyContact()],
+    stage: initialStage || (area === 'leads' ? 'qualification' : 'sales_order'), responsibleManagerId: '', assigneeIds: [], contacts: [emptyContact()],
   })
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
@@ -100,7 +100,7 @@ export function TicketCreationFlow({ area = 'leads', fixedCase = null, onClose, 
     if (Object.keys(validation).length) return
     setLoading(true); setNotice('')
     try {
-      const input = { ...ticket, companyName: companyName.trim(), caseId: selectedCase?.id, contacts: prepareContacts(ticket.contacts) }
+      const input = { ...ticket, pipelineId: pipelineId || null, companyName: companyName.trim(), caseId: selectedCase?.id, contacts: prepareContacts(ticket.contacts) }
       const result = selectedCase?.id ? await caseTicketService.createTicket(input) : await caseTicketService.createCaseAndTicket(input)
       onCreated(result)
     } catch (error) { setNotice(error.message); setLoading(false) }

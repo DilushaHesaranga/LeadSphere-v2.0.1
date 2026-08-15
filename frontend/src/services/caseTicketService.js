@@ -54,6 +54,7 @@ export const caseTicketService = Object.freeze({
     p_stage: input.stage,
     p_responsible_manager_id: input.responsibleManagerId,
     p_contacts: input.contacts,
+    p_pipeline_id: input.pipelineId || null,
     p_assignee_ids: input.assigneeIds ?? [],
   }),
   createTicket: (input) => rpc('create_crm_ticket_with_assignees', {
@@ -63,6 +64,7 @@ export const caseTicketService = Object.freeze({
     p_stage: input.stage,
     p_responsible_manager_id: input.responsibleManagerId,
     p_contacts: input.contacts,
+    p_pipeline_id: input.pipelineId || null,
     p_assignee_ids: input.assigneeIds ?? [],
   }),
   updateTicket: (ticketId, input) => rpc('update_crm_ticket', {

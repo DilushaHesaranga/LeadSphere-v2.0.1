@@ -17,6 +17,7 @@ import { TicketDetailPage } from './TicketDetailPage.jsx'
 import { FollowUpsPage } from './FollowUpsPage.jsx'
 import { TimelinePage } from './TimelinePage.jsx'
 import { CasesPage } from './CasesPage.jsx'
+import { PipelinePage } from './PipelinePage.jsx'
 
 const baseNavigation = [
   { path: '/console', label: 'Overview', icon: 'grid', exact: true },
@@ -32,7 +33,6 @@ const baseNavigation = [
 ]
 
 const placeholderContent = {
-  '/console/pipeline': ['Pipeline', 'Deal stages and authorized pipeline reporting will appear here.'],
   '/console/activity': ['Activity', 'Calls, notes, tasks, and customer touchpoints will appear here.'],
 }
 
@@ -126,6 +126,7 @@ export function ConsolePage({ pathname }) {
   else if (pathname === '/console/follow-ups') content = <FollowUpsPage />
   else if (pathname === '/console/timeline') content = <TimelinePage />
   else if (pathname === '/console/cases') content = <CasesPage />
+  else if (pathname === '/console/pipeline') content = <PipelinePage />
   else if (pathname === '/console/permissions') content = <PermissionsPage />
   else if (pathname === '/console/team') content = <TeamManagementPage />
   else if (isCaseRoute) content = <CaseDetailPage caseId={pathname.split('/').at(-1)} />
