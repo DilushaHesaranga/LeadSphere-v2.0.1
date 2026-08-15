@@ -4,6 +4,10 @@
 
 The backend is a separate Vercel project whose Root Directory is `backend`. Vercel detects the conventional `src/main.ts` NestJS entry point and packages the application as one Node.js Function. Firebase continues to host only the React frontend.
 
+Current production API origin: `https://leadsphere-api.vercel.app`
+
+Current health endpoint: `https://leadsphere-api.vercel.app/api/health`
+
 ```text
 Firebase Hosting (React)
         |

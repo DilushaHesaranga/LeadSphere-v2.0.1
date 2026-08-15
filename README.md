@@ -13,6 +13,8 @@ Firebase Hosting -> React/Vite -> Supabase Auth + Supabase PostgreSQL/RLS
 
 Firebase Auth, Firebase databases, Firebase Functions, and Prisma are intentionally not used. Firebase Hosting serves only `frontend/dist`; the NestJS API is deployed separately as a native Vercel Function. Setup and production verification are documented in `docs/VERCEL_BACKEND.md`.
 
+Production API: `https://leadsphere-api.vercel.app/api`
+
 ## 1. Configure Supabase
 
 1. Open the Supabase SQL Editor for the project.
