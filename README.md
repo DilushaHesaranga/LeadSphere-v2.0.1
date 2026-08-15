@@ -8,10 +8,10 @@ The repository also contains an Expo/React Native TypeScript mobile application 
 
 ```text
 Firebase Hosting -> React/Vite -> Supabase Auth + Supabase PostgreSQL/RLS
-                              -> NestJS API -> Supabase service role (server only)
+                              -> Vercel-hosted NestJS API -> Supabase service role (server only)
 ```
 
-Firebase Auth, Firebase databases, Firebase Functions, and Prisma are intentionally not used. The NestJS API must be hosted separately from Firebase Hosting for production because Firebase Hosting serves only `frontend/dist`.
+Firebase Auth, Firebase databases, Firebase Functions, and Prisma are intentionally not used. Firebase Hosting serves only `frontend/dist`; the NestJS API is deployed separately as a native Vercel Function. Setup and production verification are documented in `docs/VERCEL_BACKEND.md`.
 
 ## 1. Configure Supabase
 
@@ -100,7 +100,7 @@ npm run build:all
 npm run firebase:deploy
 ```
 
-Before the Firebase deployment, set `VITE_API_URL` to the HTTPS URL of the separately deployed NestJS API and set the backend's `FRONTEND_URL` and `CORS_ORIGINS` to the Firebase Hosting origin. Firebase Hosting keeps clean URLs working through its SPA rewrite and applies long-lived caching only to Vite's fingerprinted assets.
+Before the Firebase deployment, set `VITE_API_URL` to the HTTPS origin of the Vercel NestJS project, without a trailing `/api`. Set the backend's `FRONTEND_URL` and `CORS_ORIGINS` to the Firebase Hosting origin. Firebase Hosting keeps clean URLs working through its SPA rewrite and applies long-lived caching only to Vite's fingerprinted assets.
 
 ## Authorization model
 

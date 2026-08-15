@@ -18,5 +18,12 @@ describe('AppController', () => {
     it('should identify the LeadSphere API', () => {
       expect(appController.getHello()).toBe('LeadSphere API');
     });
+
+    it('returns a dependency-free health response', () => {
+      expect(appController.getHealth()).toEqual({
+        status: 'ok',
+        service: 'leadsphere-api',
+      });
+    });
   });
 });

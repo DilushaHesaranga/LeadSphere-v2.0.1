@@ -10,12 +10,14 @@ import { PermissionGuard } from './auth/permission.guard';
 import { SupabaseService } from './supabase/supabase.service';
 import { TeamController } from './team/team.controller';
 import { TeamService } from './team/team.service';
+import { validateBackendEnvironment } from './app.setup';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+      validate: validateBackendEnvironment,
     }),
   ],
   controllers: [AppController, AuthorizationController, TeamController],
