@@ -2,7 +2,7 @@
 
 LeadSphere is ElDream's CRM foundation. It uses React and Vite for the web application, NestJS for privileged server operations, Supabase Auth and PostgreSQL with Row Level Security for identity and authorization, and Firebase Hosting for the built static web application only.
 
-The repository also contains an Expo/React Native TypeScript mobile application in `mobile/`. Its first release supports the existing Sales Executive authentication and access shell without inventing CRM modules that are still placeholders on the web. Setup, build, security, and Firebase App Distribution instructions are in `docs/MOBILE.md`.
+The repository also contains an Expo/React Native TypeScript mobile application in `mobile/`. It supports the Sales Executive authentication lifecycle, daily dashboard, lead/customer Ticket work, contacts and notes, Follow Ups, and sales pipeline using the same trusted backend contracts as the web application. Setup, build, security, offline behavior, and Firebase App Distribution instructions are in `docs/MOBILE.md`.
 
 ## Architecture
 

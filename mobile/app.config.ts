@@ -1,7 +1,30 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 const appEnvironment = process.env.EXPO_PUBLIC_APP_ENV ?? "development";
 const isProduction = appEnvironment === "production";
+
+function resolveGoogleServicesFile(): string {
+  const configuredValue = process.env.GOOGLE_SERVICES_JSON;
+
+  if (!configuredValue) {
+    return "./firebase/google-services.json";
+  }
+
+  if (!configuredValue.trimStart().startsWith("{")) {
+    return configuredValue;
+  }
+
+  const generatedPath = join(process.cwd(), ".expo", "google-services.json");
+  mkdirSync(dirname(generatedPath), { recursive: true });
+  writeFileSync(generatedPath, configuredValue, {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+
+  return generatedPath;
+}
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -25,8 +48,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       ? "com.eldream.leadsphere"
       : `com.eldream.leadsphere.${appEnvironment}`,
     versionCode: 1,
+    googleServicesFile: resolveGoogleServicesFile(),
   },
   plugins: [
+    [
+      "expo-notifications",
+      {
+        defaultChannel: "default",
+        color: "#3B82F6",
+      },
+    ],
     [
       "expo-secure-store",
       {

@@ -16,6 +16,8 @@ import { can, getScope, hasRole } from "@/authorization/policy";
 import { env } from "@/config/env";
 import { apiRequest } from "@/services/api";
 import { parseAuthLink } from "@/services/authLinks";
+import { unregisterCurrentPushDevice } from "@/services/pushNotifications";
+import { clearUserCache } from "@/services/secureCache";
 import { supabase } from "@/services/supabase";
 import type { DataAccessScope, UserAuthorization } from "@/types/authorization";
 import { EMPTY_AUTHORIZATION } from "@/types/authorization";
@@ -190,14 +192,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
   );
 
   const signOut = useCallback(async () => {
+    const userId = session?.user.id;
+    await unregisterCurrentPushDevice().catch(() => undefined);
     const { error } = await supabase.auth.signOut();
-    if (error) throw new Error("Sign out could not be completed.");
+    if (error) {
+      const { error: localError } = await supabase.auth.signOut({ scope: "local" });
+      if (localError) throw new Error("Sign out could not be completed.");
+    }
+    await clearUserCache(userId);
     recoveryMode.current = false;
     setSession(null);
     setAuthorization(EMPTY_AUTHORIZATION);
     setMessage("");
     setStatus("signedOut");
-  }, []);
+  }, [session?.user.id]);
 
   const sendPasswordRecovery = useCallback(async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {

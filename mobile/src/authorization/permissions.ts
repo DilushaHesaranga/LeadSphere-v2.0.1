@@ -16,6 +16,11 @@ export const PERMISSIONS = Object.freeze({
   FOLLOWUPS_UPDATE: "followups.update",
   REMINDERS_READ: "reminders.read",
   REMINDERS_UPDATE: "reminders.update",
+  CASES_READ: "cases.read",
+  TICKETS_READ: "tickets.read",
+  TICKETS_UPDATE: "tickets.update",
+  TICKET_NOTES_CREATE: "tickets.notes.create",
+  TICKET_REQUESTS_CREATE: "tickets.requests.create",
 });
 
 export const ROLES = Object.freeze({

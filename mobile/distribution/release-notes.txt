@@ -1,6 +1,8 @@
-LeadSphere Mobile preview
+LeadSphere Mobile field-sales preview
 
-- Secure Supabase email and password authentication
-- Sales Executive role and permission verification
-- Session restoration, refresh, recovery, and logout
-- Home and Profile experiences matching currently implemented web functionality
+- Secure Supabase authentication, recovery, session restoration, and sign-out
+- Live daily dashboard with assigned work, Follow Ups, and notifications
+- Searchable lead and customer Tickets with contacts and shared notes
+- Follow Up scheduling, recurring options, completion, and cancellation
+- Mobile sales pipeline with guarded, idempotent stage movement
+- Encrypted per-user offline read cache with clear synchronization status

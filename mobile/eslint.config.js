@@ -15,4 +15,10 @@ module.exports = defineConfig([
       "@typescript-eslint/no-explicit-any": "error",
     },
   },
+  {
+    files: ["**/*.test.{ts,tsx}"],
+    rules: {
+      "import/first": "off",
+    },
+  },
 ]);

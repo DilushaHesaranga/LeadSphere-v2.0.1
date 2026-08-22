@@ -5,15 +5,24 @@ import { useAuth } from "@/auth/AuthContext";
 import { StateView } from "@/components/StateView";
 import { mobileNavigationItems } from "./navigationModel";
 import { ForgotPasswordScreen } from "@/screens/ForgotPasswordScreen";
+import { FollowUpsScreen } from "@/screens/FollowUpsScreen";
 import { HomeScreen } from "@/screens/HomeScreen";
 import { LoginScreen } from "@/screens/LoginScreen";
+import { PipelineScreen } from "@/screens/PipelineScreen";
 import { ProfileScreen } from "@/screens/ProfileScreen";
 import { ResetPasswordScreen } from "@/screens/ResetPasswordScreen";
+import { TicketDetailScreen } from "@/screens/TicketDetailScreen";
+import { WorkListScreen } from "@/screens/WorkListScreen";
 import { colors } from "@/theme/tokens";
-import type { AuthStackParamList, MainTabParamList } from "@/types/navigation";
+import type {
+  AuthStackParamList,
+  MainTabParamList,
+  WorkStackParamList,
+} from "@/types/navigation";
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const MainTabs = createBottomTabNavigator<MainTabParamList>();
+const WorkStack = createNativeStackNavigator<WorkStackParamList>();
 
 function AuthNavigator({ recovery = false }: { recovery?: boolean }) {
   return (
@@ -36,6 +45,31 @@ function AuthNavigator({ recovery = false }: { recovery?: boolean }) {
   );
 }
 
+function WorkNavigator() {
+  return (
+    <WorkStack.Navigator
+      screenOptions={{
+        headerTintColor: colors.primary,
+        headerStyle: { backgroundColor: colors.background },
+        headerShadowVisible: false,
+      }}
+    >
+      <WorkStack.Screen
+        name="WorkList"
+        component={WorkListScreen}
+        options={{ headerShown: false }}
+      />
+      <WorkStack.Screen
+        name="TicketDetail"
+        component={TicketDetailScreen}
+        options={({ route }) => ({
+          title: route.params.companyName || "Ticket details",
+        })}
+      />
+    </WorkStack.Navigator>
+  );
+}
+
 function MainNavigator() {
   const { authorization } = useAuth();
   const items = mobileNavigationItems(authorization.permissions);
@@ -51,6 +85,19 @@ function MainNavigator() {
     >
       {items.some((item) => item.key === "Home") ? (
         <MainTabs.Screen name="Home" component={HomeScreen} />
+      ) : null}
+      {items.some((item) => item.key === "Work") ? (
+        <MainTabs.Screen name="Work" component={WorkNavigator} />
+      ) : null}
+      {items.some((item) => item.key === "FollowUps") ? (
+        <MainTabs.Screen
+          name="FollowUps"
+          component={FollowUpsScreen}
+          options={{ title: "Follow Ups" }}
+        />
+      ) : null}
+      {items.some((item) => item.key === "Pipeline") ? (
+        <MainTabs.Screen name="Pipeline" component={PipelineScreen} />
       ) : null}
       {items.some((item) => item.key === "Profile") ? (
         <MainTabs.Screen name="Profile" component={ProfileScreen} />
