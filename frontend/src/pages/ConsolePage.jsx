@@ -18,6 +18,8 @@ import { FollowUpsPage } from './FollowUpsPage.jsx'
 import { TimelinePage } from './TimelinePage.jsx'
 import { CasesPage } from './CasesPage.jsx'
 import { PipelinePage } from './PipelinePage.jsx'
+import { ReportsPage } from './ReportsPage.jsx'
+import { ReportDetailPage } from './ReportDetailPage.jsx'
 
 const baseNavigation = [
   { path: '/console', label: 'Overview', icon: 'grid', exact: true },
@@ -27,6 +29,7 @@ const baseNavigation = [
   { path: '/console/cases', label: 'Cases', icon: 'file' },
   { path: '/console/timeline', label: 'Timeline', icon: 'timeline' },
   { path: '/console/pipeline', label: 'Pipeline', icon: 'briefcase', permission: PERMISSIONS.PIPELINE_READ },
+  { path: '/console/reports', label: 'Reports & Insights', icon: 'chart', permission: PERMISSIONS.REPORTS_READ },
   { path: '/console/activity', label: 'Activity', icon: 'activity', permission: PERMISSIONS.ACTIVITIES_READ },
   { path: '/console/permissions', label: 'Permissions', icon: 'lock', permission: PERMISSIONS.TICKET_REQUESTS_REVIEW },
   { path: '/console/team', label: 'Team Management', icon: 'shield', permission: PERMISSIONS.TEAM_MEMBERS_READ },
@@ -112,9 +115,11 @@ export function ConsolePage({ pathname }) {
   const navigation = baseNavigation.filter((item) => canAccessNavigation(item, permissionScopes))
   const isCaseRoute = /^\/console\/cases\/[0-9a-f-]+$/i.test(pathname)
   const isTicketRoute = /^\/console\/tickets\/[0-9a-f-]+$/i.test(pathname)
+  const isReportsRoute = pathname === '/console/reports/library' || /^\/console\/reports\/[a-z0-9-]+$/i.test(pathname)
   const requestedItem = baseNavigation.find((item) => item.path === pathname)
     ?? (isCaseRoute ? { permission: PERMISSIONS.CASES_READ } : null)
     ?? (isTicketRoute ? { permission: PERMISSIONS.TICKETS_READ } : null)
+    ?? (isReportsRoute ? { permission: PERMISSIONS.REPORTS_READ } : null)
   const authorized = !requestedItem || canAccessNavigation(requestedItem, permissionScopes)
   const logout = async () => { await signOut(); navigate('/login', { replace: true }) }
 
@@ -127,6 +132,9 @@ export function ConsolePage({ pathname }) {
   else if (pathname === '/console/timeline') content = <TimelinePage />
   else if (pathname === '/console/cases') content = <CasesPage />
   else if (pathname === '/console/pipeline') content = <PipelinePage />
+  else if (pathname === '/console/reports') content = <ReportsPage />
+  else if (pathname === '/console/reports/library') content = <ReportsPage view="library" />
+  else if (/^\/console\/reports\/[a-z0-9-]+$/i.test(pathname)) content = <ReportDetailPage key={pathname} reportKey={pathname.split('/').at(-1)} />
   else if (pathname === '/console/permissions') content = <PermissionsPage />
   else if (pathname === '/console/team') content = <TeamManagementPage />
   else if (isCaseRoute) content = <CaseDetailPage caseId={pathname.split('/').at(-1)} />
@@ -138,7 +146,7 @@ export function ConsolePage({ pathname }) {
     <div className="console-shell">
       <aside className={`console-sidebar ${menuOpen ? 'open' : ''}`}>
         <div className="sidebar-brand"><Brand/><button className="icon-button mobile-close" onClick={() => setMenuOpen(false)} aria-label="Close navigation"><Icon name="close"/></button></div>
-        <nav aria-label="Console navigation">{navigation.map((item) => <button key={item.path} className={`sidebar-link ${pathname === item.path ? 'active' : ''}`} onClick={() => { navigate(item.path); setMenuOpen(false) }}><Icon name={item.icon}/><span>{item.label}</span>{item.path === '/console/permissions' && pendingRequestCount > 0 && <span className="sidebar-count" aria-label={`${pendingRequestCount} pending permission requests`}>{pendingRequestCount > 99 ? '99+' : pendingRequestCount}</span>}</button>)}</nav>
+        <nav aria-label="Console navigation">{navigation.map((item) => <button key={item.path} className={`sidebar-link ${pathname === item.path || (!item.exact && pathname.startsWith(`${item.path}/`)) ? 'active' : ''}`} onClick={() => { navigate(item.path); setMenuOpen(false) }}><Icon name={item.icon}/><span>{item.label}</span>{item.path === '/console/permissions' && pendingRequestCount > 0 && <span className="sidebar-count" aria-label={`${pendingRequestCount} pending permission requests`}>{pendingRequestCount > 99 ? '99+' : pendingRequestCount}</span>}</button>)}</nav>
         <div className="sidebar-foot"><button className="sidebar-link" onClick={logout}><Icon name="logout"/><span>Sign out</span></button></div>
       </aside>
       {menuOpen && <button className="sidebar-overlay" onClick={() => setMenuOpen(false)} aria-label="Close navigation"/>}
