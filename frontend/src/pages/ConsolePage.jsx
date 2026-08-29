@@ -23,12 +23,12 @@ import { ReportDetailPage } from './ReportDetailPage.jsx'
 
 const baseNavigation = [
   { path: '/console', label: 'Overview', icon: 'grid', exact: true },
+  { path: '/console/cases', label: 'Cases', icon: 'file' },
   { path: '/console/leads', label: 'Leads', icon: 'lead', anyPermission: [PERMISSIONS.LEADS_READ, PERMISSIONS.TICKETS_READ] },
   { path: '/console/customers', label: 'Customers', icon: 'users', anyPermission: [PERMISSIONS.ACCOUNTS_READ, PERMISSIONS.CUSTOMER_CONTEXT_READ, PERMISSIONS.TICKETS_READ] },
   { path: '/console/follow-ups', label: 'Follow Ups', icon: 'calendar', permission: PERMISSIONS.TICKETS_READ },
-  { path: '/console/cases', label: 'Cases', icon: 'file' },
-  { path: '/console/timeline', label: 'Timeline', icon: 'timeline' },
   { path: '/console/pipeline', label: 'Pipeline', icon: 'briefcase', permission: PERMISSIONS.PIPELINE_READ },
+  { path: '/console/timeline', label: 'Timeline', icon: 'timeline' },
   { path: '/console/reports', label: 'Reports & Insights', icon: 'chart', permission: PERMISSIONS.REPORTS_READ },
   { path: '/console/permissions', label: 'Permissions', icon: 'lock', permission: PERMISSIONS.TICKET_REQUESTS_REVIEW },
   { path: '/console/team', label: 'Team Management', icon: 'shield', permission: PERMISSIONS.TEAM_MEMBERS_READ },
