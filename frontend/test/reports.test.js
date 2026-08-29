@@ -3,11 +3,13 @@ import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import {
   addReportDays, comparisonFor, csvCell, defaultReportFilters, formatReportMetric,
-  parseReportFilters, recordsToCsv, reportByKey, reportFilename, reportPresetRange,
-  REPORT_CATALOG, serializeReportFilters, todayInReportTimezone, validReportRange,
+  parseReportFilters, pipelineStageHealth, recordsToCsv, reportByKey, reportFilename,
+  reportPresetRange, REPORT_CATALOG, serializeReportFilters, summarizePipelineHealth,
+  todayInReportTimezone, validReportRange,
 } from '../src/config/reports.js'
 
 const migration = await readFile(new URL('../../supabase/migrations/20260827000100_reports_and_insights.sql', import.meta.url), 'utf8')
+const pipelineMigration = await readFile(new URL('../../supabase/migrations/20260829000100_pipeline_health_reporting.sql', import.meta.url), 'utf8')
 const consolePage = await readFile(new URL('../src/pages/ConsolePage.jsx', import.meta.url), 'utf8')
 const overviewPage = await readFile(new URL('../src/pages/ReportsPage.jsx', import.meta.url), 'utf8')
 const detailPage = await readFile(new URL('../src/pages/ReportDetailPage.jsx', import.meta.url), 'utf8')
@@ -79,6 +81,23 @@ test('the standard report catalog is stable and contains no fabricated monetary 
   assert.equal(reportByKey('revenue'), null)
 })
 
+test('pipeline health includes only open stages and explains workload and ageing risk', () => {
+  const summary = summarizePipelineHealth([
+    { pipelineId: 'sales', pipelineName: 'Sales', stage: 'qualification', label: 'Qualification', category: 'open', count: 6, averageAgeDays: 3, probability: 25 },
+    { pipelineId: 'sales', pipelineName: 'Sales', stage: 'proposal', label: 'Proposal', category: 'open', count: 3, averageAgeDays: 8, probability: 50 },
+    { pipelineId: 'sales', pipelineName: 'Sales', stage: 'negotiation', label: 'Negotiation', category: 'open', count: 1, averageAgeDays: 16, probability: 75 },
+    { pipelineId: 'sales', pipelineName: 'Sales', stage: 'won', label: 'Close won', category: 'won', count: 9, averageAgeDays: 20, probability: 100 },
+    { pipelineId: 'sales', pipelineName: 'Sales', stage: 'lost', label: 'Lost', category: 'lost', count: 4, averageAgeDays: 12, probability: 0 },
+  ], '2026-08-29')
+  assert.equal(summary.total, 10)
+  assert.equal(summary.occupiedStages, 3)
+  assert.equal(summary.attentionStages, 1)
+  assert.deepEqual(summary.stages.map((stage) => stage.stage), ['qualification', 'proposal', 'negotiation'])
+  assert.deepEqual(summary.stages.map((stage) => stage.workloadShare), [60, 30, 10])
+  assert.deepEqual(summary.stages.map((stage) => stage.health.key), ['healthy', 'watch', 'attention'])
+  assert.equal(pipelineStageHealth({ count: 0, averageAgeDays: 99 }).key, 'empty')
+})
+
 test('reporting RPCs authorize every request and derive record scope in the database', () => {
   assert.match(migration, /current_user_has_permission\('reports\.read'\)/)
   assert.match(migration, /crm_can_access_ticket\(ticket\.id, 'reports\.read'\)/)
@@ -95,6 +114,16 @@ test('database validation and aggregation use bounded local dates and indexed se
   assert.match(migration, /crm_tickets_created_reporting_idx/)
   assert.match(migration, /generate_series[\s\S]*bucket_unit/)
   assert.match(migration, /nullif\(current_won \+ current_lost, 0\)/)
+})
+
+test('pipeline health RPC is permission-scoped, open-stage-only, and aligned with its drill-down', () => {
+  assert.match(migration, /left join current_scope scoped[\s\S]*where stage\.is_active\s+and stage\.semantic_category = 'open'/)
+  assert.match(pipelineMigration, /crm_validate_report_query\(p_as_of, p_as_of/)
+  assert.match(pipelineMigration, /crm_report_ticket_scope\(as_of_utc, p_pipeline_id, p_stage, p_owner_id\)/)
+  assert.match(pipelineMigration, /scoped\.ticket_status = 'active'[\s\S]*scoped\.stage_category = 'open'/)
+  assert.match(pipelineMigration, /stage\.semantic_category = 'open'/)
+  assert.match(pipelineMigration, /grant execute on function public\.get_crm_pipeline_health[\s\S]*to authenticated/)
+  assert.match(migration, /when 'pipeline-health' then ticket_status = 'active' and stage_category = 'open'/)
 })
 
 test('overview and drill-down share cohort, outcome, activity, and Follow Up boundaries', () => {
@@ -122,6 +151,9 @@ test('Reports & Insights is permission-gated and includes resilient interactive 
   assert.match(overviewPage, /Clear filters|onClear/)
   assert.match(overviewPage, /ReportsLibrary/)
   assert.match(workspace, /aria-label="Report summary metrics"/)
+  assert.match(workspace, /Active workload by open stage/)
+  assert.match(workspace, /Workload share and average time in stage/)
+  assert.match(workspace, /aria-label="Active Ticket workload by open pipeline stage"/)
   assert.match(workspace, /onDrillDown/)
   assert.match(detailPage, /No records match this report/)
   assert.match(styles, /@media \(max-width:850px\)[\s\S]*report-dashboard-grid/)

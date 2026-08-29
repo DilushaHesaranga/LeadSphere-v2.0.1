@@ -99,7 +99,7 @@ export function ReportsPage({ view = 'overview' }) {
         <ReportMetricGrid metrics={overview.metrics} onOpenReport={openReport}/>
         <section className="report-dashboard-grid">
           <TicketVolumeChart series={overview.charts?.ticketVolume} onDrillDown={openReport}/>
-          <PipelineFunnel stages={overview.charts?.pipelineStages} onDrillDown={openReport}/>
+          <PipelineFunnel stages={overview.charts?.pipelineStages} summary={overview.pipelineHealth} asOf={overview.period?.to} onDrillDown={openReport}/>
           <OutcomeChart series={overview.charts?.outcomes} onDrillDown={openReport}/>
           <FollowUpHealthChart series={overview.charts?.followUps} onDrillDown={openReport}/>
           <TeamPerformanceTable items={overview.charts?.teamPerformance} onDrillDown={openReport}/>

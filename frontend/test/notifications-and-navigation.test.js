@@ -14,6 +14,11 @@ test('global Cases and Timeline navigation is visible without a permission gate'
   assert.match(consolePage, /\{ path: '\/console\/timeline', label: 'Timeline', icon: 'timeline' \}/)
 })
 
+test('unfinished Activity module is not exposed in console navigation or routing', () => {
+  assert.doesNotMatch(consolePage, /path: '\/console\/activity'/)
+  assert.doesNotMatch(consolePage, /Calls, notes, tasks, and customer touchpoints will appear here/)
+})
+
 test('Cases is removed from Ticket tabs while Ticket Timeline remains', () => {
   assert.doesNotMatch(ticketPage, /\['cases', 'Cases'\]/)
   assert.match(ticketPage, /\['timeline', 'Timeline'\]/)

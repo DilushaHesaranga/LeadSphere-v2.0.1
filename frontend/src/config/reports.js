@@ -1,4 +1,6 @@
 export const REPORT_TIMEZONE = 'Asia/Colombo'
+export const PIPELINE_WATCH_DAYS = 7
+export const PIPELINE_ATTENTION_DAYS = 14
 
 export const REPORT_PRESETS = Object.freeze([
   { value: '30', label: 'Last 30 days', days: 30 },
@@ -41,7 +43,7 @@ export const REPORT_CATALOG = Object.freeze([
   {
     key: 'pipeline-health',
     name: 'Pipeline Health',
-    description: 'Inspect active workload, distribution, and average time in each open stage.',
+    description: 'Inspect active open-stage workload, distribution, and stages that may need attention based on age.',
     category: 'pipeline',
     chart: 'pipeline',
   },
@@ -154,6 +156,39 @@ export function formatReportMetric(value, format = 'count') {
   if (format === 'percent') return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(Number(value))}%`
   if (format === 'days') return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(Number(value))} days`
   return new Intl.NumberFormat().format(Number(value))
+}
+
+export function pipelineStageHealth(stage = {}) {
+  const count = Math.max(0, Number(stage.count ?? 0))
+  const averageAgeDays = Math.max(0, Number(stage.averageAgeDays ?? 0))
+  if (count === 0) return { key: 'empty', label: 'No active Tickets' }
+  if (averageAgeDays >= PIPELINE_ATTENTION_DAYS) return { key: 'attention', label: 'Needs attention' }
+  if (averageAgeDays >= PIPELINE_WATCH_DAYS) return { key: 'watch', label: 'Watch' }
+  return { key: 'healthy', label: 'On track' }
+}
+
+export function summarizePipelineHealth(stages = [], asOf = null) {
+  const openStages = stages
+    .filter((stage) => String(stage?.category ?? '').toLowerCase() === 'open')
+    .map((stage) => ({
+      ...stage,
+      count: Math.max(0, Number(stage.count ?? 0)),
+      averageAgeDays: Math.max(0, Number(stage.averageAgeDays ?? 0)),
+      probability: Math.max(0, Number(stage.probability ?? 0)),
+    }))
+  const total = openStages.reduce((sum, stage) => sum + stage.count, 0)
+  const normalizedStages = openStages.map((stage) => ({
+    ...stage,
+    workloadShare: total ? Math.round((stage.count / total) * 1000) / 10 : 0,
+    health: pipelineStageHealth(stage),
+  }))
+  return {
+    asOf,
+    total,
+    occupiedStages: normalizedStages.filter((stage) => stage.count > 0).length,
+    attentionStages: normalizedStages.filter((stage) => stage.health.key === 'attention').length,
+    stages: normalizedStages,
+  }
 }
 
 export function reportDateLabel(from, to) {

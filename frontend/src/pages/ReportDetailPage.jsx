@@ -31,7 +31,7 @@ function DetailChart({ report, overview, onDrillDown }) {
     return <TicketVolumeChart series={overview.charts?.ticketVolume} onDrillDown={onDrillDown}/>
   }
   if (report.chart === 'conversion') return <ReportComparisonChart kicker="Cohort conversion" title="Converted Tickets" current={overview.metrics?.convertedTickets?.value} previous={overview.metrics?.convertedTickets?.previous}/>
-  if (report.chart === 'pipeline') return <PipelineFunnel stages={overview.charts?.pipelineStages} onDrillDown={onDrillDown}/>
+  if (report.chart === 'pipeline') return <PipelineFunnel stages={overview.charts?.pipelineStages} summary={overview.pipelineHealth} asOf={overview.period?.to} onDrillDown={onDrillDown}/>
   if (report.chart === 'outcomes') return <OutcomeChart series={overview.charts?.outcomes} onDrillDown={onDrillDown}/>
   if (report.chart === 'followups') return <FollowUpHealthChart series={overview.charts?.followUps} onDrillDown={onDrillDown}/>
   if (report.chart === 'team') return <TeamPerformanceTable items={overview.charts?.teamPerformance} onDrillDown={onDrillDown}/>

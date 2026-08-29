@@ -5,7 +5,7 @@ Reports & Insights is LeadSphere's permission-aware reporting workspace. It aggr
 ## Architecture
 
 - React renders the overview, reports library, report details, interactive charts, tables, and CSV download.
-- The browser calls three authenticated Supabase RPCs through `reportService`.
+- The browser calls four authenticated Supabase RPCs through `reportService`.
 - PostgreSQL performs filtering, point-in-time stage lookup, aggregation, comparison-period calculations, pagination, and record-level authorization.
 - No chart or export dependency was added. Charts use semantic HTML/CSS, and CSV generation escapes spreadsheet formulas.
 - LeadSphere is currently a single-company deployment. There is no organization or tenant key in the CRM schema. Isolation is therefore based on authentication, role scope, team membership, responsible-manager ownership, and active Ticket assignment through `crm_can_access_ticket`.
@@ -38,7 +38,7 @@ Users without `reports.read` cannot see the navigation destination and cannot ca
 | --- | --- |
 | `ticket-volume` | Tickets created in the selected period |
 | `conversion` | Selected-period Ticket creation cohort that reached a Customer stage by period end |
-| `pipeline-health` | Active Tickets in open stages as of period end |
+| `pipeline-health` | Active Tickets in open stages as of period end, with workload share and stage-age attention indicators |
 | `outcomes` | Tickets reaching their current Won or Lost outcome in the period |
 | `follow-up-health` | Follow Ups scheduled in the period, including overdue status |
 | `activity-summary` | Server-recorded Ticket workflow activity in the period |
@@ -79,6 +79,10 @@ Returns the reporting timezone, active pipelines and stages, and only owners/man
 
 Returns period metadata, comparison-period metadata, KPI values and previous values, chart series, insights, and metric definitions.
 
+### `get_crm_pipeline_health(p_as_of, p_pipeline_id, p_stage, p_owner_id)`
+
+Returns the authorized active workload for canonical open stages at the selected period end. It includes empty open stages for pipeline context, total active Tickets, occupied-stage count, and stages whose average age has reached the 14-day attention threshold. The UI also marks populated stages at 7 days as Watch. These thresholds are transparent operational signals rather than predictions.
+
 ### `list_crm_report_records(p_report_key, p_from, p_to, p_pipeline_id, p_stage, p_owner_id, p_sort, p_direction, p_page, p_page_size)`
 
 Returns the stable column description, authorized records, total count, current page, page size, and page count. Page size is bounded to 1–200. The report key, range, pipeline, stage, owner, sort, and direction are validated by PostgreSQL.
@@ -91,9 +95,9 @@ Very large asynchronous exports and export audit events are not implemented beca
 
 ## Database change
 
-Migration: `supabase/migrations/20260827000100_reports_and_insights.sql`
+Migrations: `supabase/migrations/20260827000100_reports_and_insights.sql` and `supabase/migrations/20260829000100_pipeline_health_reporting.sql`
 
-It adds one partial Ticket creation-date index, two private reporting helpers, and three authenticated entry RPCs. It does not rewrite or delete existing CRM data.
+Together they add one partial Ticket creation-date index, two private reporting helpers, and four authenticated entry RPCs. They do not rewrite or delete existing CRM data.
 
 Apply the migration from the LeadSphere repository root using the project's normal linked Supabase migration workflow before using the new screen against a deployed environment.
 

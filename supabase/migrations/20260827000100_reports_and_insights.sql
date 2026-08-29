@@ -366,6 +366,7 @@ begin
     join public.crm_pipelines pipeline on pipeline.id = stage.pipeline_id and pipeline.status = 'active'
     left join current_scope scoped on scoped.stage_slug = stage.slug and scoped.ticket_status = 'active'
     where stage.is_active
+      and stage.semantic_category = 'open'
       and (p_pipeline_id is null or stage.pipeline_id = p_pipeline_id)
       and (p_stage is null or stage.slug = p_stage)
     group by stage.pipeline_id, pipeline.name, stage.slug, stage.name,

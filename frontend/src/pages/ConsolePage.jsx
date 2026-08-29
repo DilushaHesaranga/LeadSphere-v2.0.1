@@ -30,14 +30,9 @@ const baseNavigation = [
   { path: '/console/timeline', label: 'Timeline', icon: 'timeline' },
   { path: '/console/pipeline', label: 'Pipeline', icon: 'briefcase', permission: PERMISSIONS.PIPELINE_READ },
   { path: '/console/reports', label: 'Reports & Insights', icon: 'chart', permission: PERMISSIONS.REPORTS_READ },
-  { path: '/console/activity', label: 'Activity', icon: 'activity', permission: PERMISSIONS.ACTIVITIES_READ },
   { path: '/console/permissions', label: 'Permissions', icon: 'lock', permission: PERMISSIONS.TICKET_REQUESTS_REVIEW },
   { path: '/console/team', label: 'Team Management', icon: 'shield', permission: PERMISSIONS.TEAM_MEMBERS_READ },
 ]
-
-const placeholderContent = {
-  '/console/activity': ['Activity', 'Calls, notes, tasks, and customer touchpoints will appear here.'],
-}
 
 function Overview({ profile, roles }) {
   return (
@@ -139,7 +134,6 @@ export function ConsolePage({ pathname }) {
   else if (pathname === '/console/team') content = <TeamManagementPage />
   else if (isCaseRoute) content = <CaseDetailPage caseId={pathname.split('/').at(-1)} />
   else if (isTicketRoute) content = <TicketDetailPage ticketId={pathname.split('/').at(-1)} />
-  else if (placeholderContent[pathname]) content = <Placeholder title={placeholderContent[pathname][0]} description={placeholderContent[pathname][1]}/>
   else content = <Placeholder title="Console" description="This protected module has not been configured yet."/>
 
   return (
