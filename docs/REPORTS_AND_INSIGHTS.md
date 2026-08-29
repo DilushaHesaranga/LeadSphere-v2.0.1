@@ -38,7 +38,7 @@ Users without `reports.read` cannot see the navigation destination and cannot ca
 | --- | --- |
 | `ticket-volume` | Tickets created in the selected period |
 | `conversion` | Selected-period Ticket creation cohort that reached a Customer stage by period end |
-| `pipeline-health` | Active Tickets in open stages as of period end, with workload share and stage-age attention indicators |
+| `pipeline-health` | Current Ticket distribution across active pipeline stages, with open-workload ageing and won/lost outcome context |
 | `outcomes` | Tickets reaching their current Won or Lost outcome in the period |
 | `follow-up-health` | Follow Ups scheduled in the period, including overdue status |
 | `activity-summary` | Server-recorded Ticket workflow activity in the period |
@@ -81,7 +81,7 @@ Returns period metadata, comparison-period metadata, KPI values and previous val
 
 ### `get_crm_pipeline_health(p_as_of, p_pipeline_id, p_stage, p_owner_id)`
 
-Returns the authorized active workload for canonical open stages at the selected period end. It includes empty open stages for pipeline context, total active Tickets, occupied-stage count, and stages whose average age has reached the 14-day attention threshold. The UI also marks populated stages at 7 days as Watch. These thresholds are transparent operational signals rather than predictions.
+Returns the authorized current Ticket distribution across active pipeline stages at the selected period end. It separates open workload from won/lost outcomes, preserves empty stages for context, and counts open stages whose average age has reached the 14-day attention threshold. The UI marks populated open stages at 7 days as Watch. Outcome stages are labelled separately and do not receive misleading ageing warnings. These thresholds are transparent operational signals rather than predictions.
 
 ### `list_crm_report_records(p_report_key, p_from, p_to, p_pipeline_id, p_stage, p_owner_id, p_sort, p_direction, p_page, p_page_size)`
 
@@ -95,7 +95,7 @@ Very large asynchronous exports and export audit events are not implemented beca
 
 ## Database change
 
-Migrations: `supabase/migrations/20260827000100_reports_and_insights.sql` and `supabase/migrations/20260829000100_pipeline_health_reporting.sql`
+Migrations: `supabase/migrations/20260827000100_reports_and_insights.sql`, `supabase/migrations/20260829000100_pipeline_health_reporting.sql`, and `supabase/migrations/20260829000200_pipeline_health_complete_stage_snapshot.sql`
 
 Together they add one partial Ticket creation-date index, two private reporting helpers, and four authenticated entry RPCs. They do not rewrite or delete existing CRM data.
 

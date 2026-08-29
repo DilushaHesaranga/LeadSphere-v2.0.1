@@ -89,22 +89,22 @@ export function PipelineFunnel({ stages = [], summary, asOf, onDrillDown }) {
   const normalizedStages = summarizePipelineHealth(health.stages ?? stages, health.asOf ?? asOf).stages
   const maximum = Math.max(1, ...normalizedStages.map((stage) => stage.count))
   return <section className="report-chart-card report-funnel-card" aria-labelledby="pipeline-health-title">
-    <header className="report-chart-heading pipeline-health-heading"><div><span className="section-kicker">Pipeline health</span><h2 id="pipeline-health-title">Active workload by open stage</h2></div><span>As of {health.asOf ? reportDateLabel(health.asOf, health.asOf) : 'period end'}</span></header>
+    <header className="report-chart-heading pipeline-health-heading"><div><span className="section-kicker">Pipeline health</span><h2 id="pipeline-health-title">Tickets by pipeline stage</h2></div><span>As of {health.asOf ? reportDateLabel(health.asOf, health.asOf) : 'period end'}</span></header>
     <div className="pipeline-health-summary" aria-label="Pipeline health summary">
-      <span><small>Active Tickets</small><strong>{health.total ?? 0}</strong></span>
-      <span><small>Occupied stages</small><strong>{health.occupiedStages ?? 0}</strong></span>
+      <span><small>Open pipeline</small><strong>{health.activeTotal ?? 0}</strong></span>
+      <span><small>Won or lost</small><strong>{health.outcomeTotal ?? 0}</strong></span>
       <span className={(health.attentionStages ?? 0) > 0 ? 'attention' : ''}><small>Attention stages</small><strong>{health.attentionStages ?? 0}</strong></span>
     </div>
-    <div className="pipeline-health-guide"><span>Workload share and average time in stage</span><span><i className="watch"/>Watch at 7 days <i className="attention"/>Needs attention at 14 days</span></div>
-    <div className="pipeline-health-list" role="list" aria-label="Active Ticket workload by open pipeline stage">
-      {normalizedStages.map((stage) => <button key={`${stage.pipelineId}-${stage.stage}`} type="button" role="listitem" className={`pipeline-health-row ${stage.health.key}`} disabled={!stage.count} onClick={() => onDrillDown('pipeline-health', { stage: stage.stage })} aria-label={`${stage.label}: ${stage.count} active Tickets, ${stage.workloadShare}% of workload, average ${stage.averageAgeDays} days in stage, ${stage.health.label}. ${stage.count ? 'Open records.' : ''}`}>
+    <div className="pipeline-health-guide"><span>Share of visible Tickets and average time in stage</span><span><i className="watch"/>Watch open work at 7 days <i className="attention"/>Attention at 14 days</span></div>
+    <div className="pipeline-health-list" role="list" aria-label="Visible Tickets by pipeline stage">
+      {normalizedStages.map((stage) => <button key={`${stage.pipelineId}-${stage.stage}`} type="button" role="listitem" className={`pipeline-health-row ${stage.health.key} category-${stage.category}`} disabled={!stage.count} onClick={() => onDrillDown(stage.category === 'open' ? 'pipeline-health' : 'outcomes', { stage: stage.stage })} aria-label={`${stage.label}: ${stage.count} Tickets, ${stage.workloadShare}% of visible Tickets, average ${stage.averageAgeDays} days in stage, ${stage.health.label}. ${stage.count ? 'Open records.' : ''}`}>
         <span className="pipeline-stage-name"><strong>{stage.label}</strong><small>{stage.pipelineName}</small></span>
         <span className="pipeline-stage-meter" aria-hidden="true"><i style={{ width: `${(stage.count / maximum) * 100}%` }}/></span>
-        <span className="pipeline-stage-stat"><strong>{stage.count}</strong><small>{stage.workloadShare}% of workload</small></span>
+        <span className="pipeline-stage-stat"><strong>{stage.count}</strong><small>{stage.workloadShare}% of Tickets</small></span>
         <span className="pipeline-stage-stat"><strong>{stage.averageAgeDays}</strong><small>avg days</small></span>
         <span className={`pipeline-health-pill ${stage.health.key}`}>{stage.health.label}</span>
       </button>)}
-      {!normalizedStages.length && <div className="report-chart-empty"><Icon name="chart" size={25}/><strong>No active pipeline workload</strong><span>No open stages match the selected filters.</span></div>}
+      {!normalizedStages.length && <div className="report-chart-empty"><Icon name="chart" size={25}/><strong>No pipeline data</strong><span>No stages match the selected filters.</span></div>}
     </div>
   </section>
 }

@@ -43,7 +43,7 @@ export const REPORT_CATALOG = Object.freeze([
   {
     key: 'pipeline-health',
     name: 'Pipeline Health',
-    description: 'Inspect active open-stage workload, distribution, and stages that may need attention based on age.',
+    description: 'Inspect current Ticket distribution across the pipeline, open-stage workload, outcomes, and stages that may need attention.',
     category: 'pipeline',
     chart: 'pipeline',
   },
@@ -161,23 +161,26 @@ export function formatReportMetric(value, format = 'count') {
 export function pipelineStageHealth(stage = {}) {
   const count = Math.max(0, Number(stage.count ?? 0))
   const averageAgeDays = Math.max(0, Number(stage.averageAgeDays ?? 0))
-  if (count === 0) return { key: 'empty', label: 'No active Tickets' }
+  const category = String(stage.category ?? 'open').toLowerCase()
+  if (count === 0) return { key: 'empty', label: 'No Tickets' }
+  if (category === 'won') return { key: 'won', label: 'Won outcome' }
+  if (category === 'lost') return { key: 'lost', label: 'Lost outcome' }
   if (averageAgeDays >= PIPELINE_ATTENTION_DAYS) return { key: 'attention', label: 'Needs attention' }
   if (averageAgeDays >= PIPELINE_WATCH_DAYS) return { key: 'watch', label: 'Watch' }
   return { key: 'healthy', label: 'On track' }
 }
 
 export function summarizePipelineHealth(stages = [], asOf = null) {
-  const openStages = stages
-    .filter((stage) => String(stage?.category ?? '').toLowerCase() === 'open')
+  const pipelineStages = stages
     .map((stage) => ({
       ...stage,
+      category: String(stage?.category ?? 'open').toLowerCase(),
       count: Math.max(0, Number(stage.count ?? 0)),
       averageAgeDays: Math.max(0, Number(stage.averageAgeDays ?? 0)),
       probability: Math.max(0, Number(stage.probability ?? 0)),
     }))
-  const total = openStages.reduce((sum, stage) => sum + stage.count, 0)
-  const normalizedStages = openStages.map((stage) => ({
+  const total = pipelineStages.reduce((sum, stage) => sum + stage.count, 0)
+  const normalizedStages = pipelineStages.map((stage) => ({
     ...stage,
     workloadShare: total ? Math.round((stage.count / total) * 1000) / 10 : 0,
     health: pipelineStageHealth(stage),
@@ -185,8 +188,10 @@ export function summarizePipelineHealth(stages = [], asOf = null) {
   return {
     asOf,
     total,
+    activeTotal: normalizedStages.filter((stage) => stage.category === 'open').reduce((sum, stage) => sum + stage.count, 0),
+    outcomeTotal: normalizedStages.filter((stage) => ['won', 'lost'].includes(stage.category)).reduce((sum, stage) => sum + stage.count, 0),
     occupiedStages: normalizedStages.filter((stage) => stage.count > 0).length,
-    attentionStages: normalizedStages.filter((stage) => stage.health.key === 'attention').length,
+    attentionStages: normalizedStages.filter((stage) => stage.category === 'open' && stage.health.key === 'attention').length,
     stages: normalizedStages,
   }
 }
