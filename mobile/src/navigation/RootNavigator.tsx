@@ -1,5 +1,7 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import type { ComponentProps } from "react";
 
 import { useAuth } from "@/auth/AuthContext";
 import { StateView } from "@/components/StateView";
@@ -23,6 +25,19 @@ import type {
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const MainTabs = createBottomTabNavigator<MainTabParamList>();
 const WorkStack = createNativeStackNavigator<WorkStackParamList>();
+
+type IoniconName = ComponentProps<typeof Ionicons>["name"];
+
+const TAB_ICONS: Record<
+  keyof MainTabParamList,
+  { active: IoniconName; inactive: IoniconName }
+> = {
+  Home: { active: "home", inactive: "home-outline" },
+  Work: { active: "briefcase", inactive: "briefcase-outline" },
+  FollowUps: { active: "calendar", inactive: "calendar-outline" },
+  Pipeline: { active: "analytics", inactive: "analytics-outline" },
+  Profile: { active: "person", inactive: "person-outline" },
+};
 
 function AuthNavigator({ recovery = false }: { recovery?: boolean }) {
   return (
@@ -75,13 +90,23 @@ function MainNavigator() {
   const items = mobileNavigationItems(authorization.permissions);
   return (
     <MainTabs.Navigator
-      screenOptions={{
+      screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.inkMuted,
         tabBarStyle: { borderTopColor: colors.border },
         tabBarLabelStyle: { fontWeight: "700" },
-      }}
+        tabBarIcon: ({ color, focused, size }) => {
+          const icons = TAB_ICONS[route.name];
+          return (
+            <Ionicons
+              name={focused ? icons.active : icons.inactive}
+              color={color}
+              size={size}
+            />
+          );
+        },
+      })}
     >
       {items.some((item) => item.key === "Home") ? (
         <MainTabs.Screen name="Home" component={HomeScreen} />
