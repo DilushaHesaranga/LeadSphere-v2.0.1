@@ -8,6 +8,7 @@ function messageFor(error) {
     'Select a ', 'Purpose must ', 'Only active Tickets ', 'Only pending Follow Ups ',
     'Ticket not found', 'Follow Up not found', 'Recurring Follow Up not found',
     'A request identifier ', 'A one-time follow-up ', 'Authentication required',
+    'You are not assigned to this ticket.', 'Your role does not support this action.',
   ]
   return safeMessages.some((prefix) => message.startsWith(prefix)) ? message : 'The Follow Up request could not be completed. Please try again.'
 }

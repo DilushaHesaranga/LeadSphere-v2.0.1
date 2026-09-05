@@ -1,3 +1,5 @@
+import { ROLES } from '../auth/permissions.js'
+
 export const FOLLOW_UP_TYPES = Object.freeze([
   { value: 'EMAIL', label: 'Email' },
   { value: 'CALL', label: 'Call' },
@@ -12,6 +14,27 @@ export const FOLLOW_UP_FREQUENCIES = Object.freeze([
 ])
 
 export const FOLLOW_UP_STATUSES = Object.freeze(['PENDING', 'COMPLETED', 'CANCELLED'])
+
+export const FOLLOW_UP_CREATOR_ROLES = Object.freeze([
+  ROLES.SALES_EXECUTIVE,
+  ROLES.MARKETING_EXECUTIVE,
+  ROLES.SALES_MANAGER,
+  ROLES.DELIVERY_MANAGER,
+])
+
+export function hasFollowUpCreatorRole(roles = []) {
+  return roles.some((role) => FOLLOW_UP_CREATOR_ROLES.includes(role?.slug))
+}
+
+export function isUserAssociatedWithTicket(ticket, userId) {
+  if (!ticket || !userId) return false
+  if (ticket.responsibleManagerId === userId) return true
+  return ticket.assignedUsers?.some((assignedUser) => assignedUser?.id === userId) ?? false
+}
+
+export function canCreateTicketFollowUp({ ticket, userId, roles = [] }) {
+  return hasFollowUpCreatorRole(roles) && isUserAssociatedWithTicket(ticket, userId)
+}
 
 export function followUpFrequencyLabel(value) {
   return FOLLOW_UP_FREQUENCIES.find((item) => item.value === value)?.label ?? 'One-time'

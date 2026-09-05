@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { PERMISSIONS } from '../auth/permissions.js'
-import { followUpFrequencyLabel, FOLLOW_UP_STATUSES } from '../config/followUps.js'
+import { canCreateTicketFollowUp, followUpFrequencyLabel, FOLLOW_UP_STATUSES, hasFollowUpCreatorRole } from '../config/followUps.js'
 import { formatDateTime } from '../config/crm.js'
 import { followUpService } from '../services/followUpService.js'
 import { navigate } from '../utils/router.js'
@@ -94,7 +94,7 @@ function FollowUpBoard({ items, ticket, global, mayManage, busy, onEdit, onCompl
 }
 
 export function FollowUpWorkspace({ ticket = null, global = false }) {
-  const { can } = useAuth()
+  const { can, roles, user } = useAuth()
   const [view, setView] = useState('ALL')
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -104,6 +104,9 @@ export function FollowUpWorkspace({ ticket = null, global = false }) {
   const [dialog, setDialog] = useState(null)
   const [confirmation, setConfirmation] = useState(null)
   const mayManage = can(PERMISSIONS.TICKET_NOTES_CREATE)
+  const mayCreate = global
+    ? hasFollowUpCreatorRole(roles)
+    : ticket?.status === 'active' && canCreateTicketFollowUp({ ticket, userId: user?.id, roles })
 
   const load = useCallback(async () => {
     setLoading(true); setError('')
@@ -140,12 +143,12 @@ export function FollowUpWorkspace({ ticket = null, global = false }) {
     <div className="follow-up-tabs" role="tablist" aria-label="Follow Up status">{views.map((status) => <button key={status} type="button" role="tab" aria-selected={view === status} className={view === status ? 'active' : ''} onClick={() => setView(status)}>{status === 'ALL' ? 'All' : status[0] + status.slice(1).toLowerCase()}</button>)}</div>
     {error && <div className="alert alert-error" role="alert">{error}<button className="text-button" type="button" onClick={load}>Retry</button></div>}
     {success && <div className="alert alert-success" role="status">{success}</div>}
-    {loading ? <div className="loading-state panel-loading">Loading Follow Ups...</div> : items.length ? <FollowUpBoard items={items} ticket={ticket} global={global} mayManage={mayManage} busy={busy} onEdit={(item) => setDialog(item)} onComplete={complete} onCancel={(item) => setConfirmation({ type: 'cancel', item })} onStop={(item) => setConfirmation({ type: 'stop', item })}/> : <div className="empty-state module-empty"><Icon name="calendar" size={30}/><h2>No {view === 'ALL' ? '' : view.toLowerCase()} Follow Ups.</h2><p>{mayManage ? 'Create a Follow Up to keep the next customer action visible.' : 'Follow Ups will appear here when they are scheduled.'}</p>{mayManage && !global && <button className="button button-primary" type="button" onClick={() => setDialog('create')}><Icon name="plus" size={16}/>Create Follow Up</button>}</div>}
+    {loading ? <div className="loading-state panel-loading">Loading Follow Ups...</div> : items.length ? <FollowUpBoard items={items} ticket={ticket} global={global} mayManage={mayManage} busy={busy} onEdit={(item) => setDialog(item)} onComplete={complete} onCancel={(item) => setConfirmation({ type: 'cancel', item })} onStop={(item) => setConfirmation({ type: 'stop', item })}/> : <div className="empty-state module-empty"><Icon name="calendar" size={30}/><h2>No {view === 'ALL' ? '' : view.toLowerCase()} Follow Ups.</h2><p>{mayCreate ? 'Create a Follow Up to keep the next customer action visible.' : 'Follow Ups will appear here when they are scheduled.'}</p>{mayCreate && !global && <button className="button button-primary" type="button" onClick={() => setDialog('create')}><Icon name="plus" size={16}/>Create Follow Up</button>}</div>}
     {dialog && <FollowUpDialog ticket={ticket} followUp={dialog === 'create' ? null : dialog} onClose={() => setDialog(null)} onSaved={(_result, _selectedTicket, editing) => changed(editing ? 'Follow Up updated.' : 'Follow Up created.')}/>} 
     {confirmation && <ConfirmDialog title={confirmation.type === 'cancel' ? 'Cancel Follow Up' : 'Stop recurring series'} confirmLabel={confirmation.type === 'cancel' ? 'Cancel Follow Up' : 'Stop recurrence'} danger busy={busy} onClose={() => setConfirmation(null)} onConfirm={confirm}><p>{confirmation.type === 'cancel' ? <>Cancel the Follow Up scheduled for <strong>{formatDateTime(confirmation.item.scheduledAt)}</strong>?</> : <>Stop the <strong>{followUpFrequencyLabel(confirmation.item.frequency)}</strong> recurring series?</>}</p><p>Historical occurrences will remain available.</p></ConfirmDialog>}
   </>
 
-  if (!global) return <section className="detail-panel follow-up-ticket-panel" aria-labelledby="follow-ups-heading"><div className="panel-heading"><div><h2 id="follow-ups-heading">Follow Ups</h2><p>Scheduled customer actions for this Ticket</p></div>{mayManage && <button className="button button-primary button-small" type="button" onClick={() => setDialog('create')}><Icon name="plus" size={16}/>Create Follow Up</button>}</div>{body}</section>
+  if (!global) return <section className="detail-panel follow-up-ticket-panel" aria-labelledby="follow-ups-heading"><div className="panel-heading"><div><h2 id="follow-ups-heading">Follow Ups</h2><p>Scheduled customer actions for this Ticket</p></div>{mayCreate && <button className="button button-primary button-small" type="button" onClick={() => setDialog('create')}><Icon name="plus" size={16}/>Create Follow Up</button>}</div>{body}</section>
 
-  return <div className="console-content follow-ups-page"><div className="page-heading"><div><span className="section-kicker">Customer action schedule</span><h1>Follow Ups</h1><p>Upcoming and historical Follow Ups from every Ticket you are authorised to access.</p></div><button className="button button-secondary" type="button" onClick={load} disabled={loading}>Refresh</button></div>{body}{mayManage && <button type="button" className="follow-up-fab" aria-label="Create follow-up" onClick={() => setDialog('create')}><Icon name="plus" size={24}/></button>}</div>
+  return <div className="console-content follow-ups-page"><div className="page-heading"><div><span className="section-kicker">Customer action schedule</span><h1>Follow Ups</h1><p>Upcoming and historical Follow Ups from every Ticket you are authorised to access.</p></div><button className="button button-secondary" type="button" onClick={load} disabled={loading}>Refresh</button></div>{body}{mayCreate && <button type="button" className="follow-up-fab" aria-label="Create follow-up" onClick={() => setDialog('create')}><Icon name="plus" size={24}/></button>}</div>
 }

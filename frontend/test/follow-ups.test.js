@@ -10,6 +10,7 @@ import {
 } from '../src/config/followUps.js'
 
 const migration = await readFile(new URL('../../supabase/migrations/20260806000100_follow_ups.sql', import.meta.url), 'utf8')
+const creationAuthorizationMigration = await readFile(new URL('../../supabase/migrations/20260905000100_follow_up_creation_authorization.sql', import.meta.url), 'utf8')
 const dialog = await readFile(new URL('../src/components/FollowUpDialog.jsx', import.meta.url), 'utf8')
 const workspace = await readFile(new URL('../src/components/FollowUpWorkspace.jsx', import.meta.url), 'utf8')
 const service = await readFile(new URL('../src/services/followUpService.js', import.meta.url), 'utf8')
@@ -71,10 +72,10 @@ test('database schema separates recurring series and historical occurrences', ()
   for (const index of ['ticket_idx', 'scheduled_idx', 'status_idx', 'series_idx', 'created_by_idx']) assert.ok(migration.includes(index))
 })
 
-test('database access follows Ticket visibility and mutation permissions', () => {
+test('database access preserves Ticket visibility and applies dedicated creation authorization', () => {
   assert.match(migration, /crm_follow_up_occurrences_read[\s\S]*crm_can_access_ticket\(ticket_id, 'tickets\.read'\)/)
-  assert.match(migration, /create_crm_follow_up[\s\S]*crm_can_access_ticket\(p_ticket_id, 'tickets\.notes\.create'\)/)
-  assert.match(migration, /search_crm_follow_up_tickets[\s\S]*crm_can_access_ticket\(ticket\.id, 'tickets\.notes\.create'\)/)
+  assert.match(creationAuthorizationMigration, /create_crm_follow_up[\s\S]*ticket_record\.responsible_manager_id[\s\S]*crm_ticket_assignments/)
+  assert.match(creationAuthorizationMigration, /search_crm_follow_up_tickets[\s\S]*ticket\.responsible_manager_id = actor[\s\S]*crm_ticket_assignments/)
   assert.match(migration, /enable row level security/)
   assert.match(migration, /revoke all on public\.crm_follow_up_series, public\.crm_follow_up_occurrences/)
 })
