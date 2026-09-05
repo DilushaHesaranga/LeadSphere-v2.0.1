@@ -22,7 +22,8 @@
 .hero-section { min-height: 670px; padding: 82px max(28px, calc((100vw - 1200px)/2)); display: grid; grid-template-columns: minmax(0, .92fr) minmax(480px, 1.08fr); align-items: center; gap: 70px; position: relative; }
 .hero-glow { width: 560px; height: 560px; position: absolute; right: -140px; top: -190px; border-radius: 50%; background: radial-gradient(circle, rgba(185,231,105,.24), transparent 66%); pointer-events: none; }
 .hero-copy { position: relative; z-index: 2; }
-.hero-copy h1 { margin: 24px 0 22px; max-width: 650px; font-family: Georgia, "Times New Roman", serif; font-size: clamp(47px, 5.3vw, 76px); line-height: .99; letter-spacing: -3.5px; font-weight: 500; color: #f1fff8; }
+.hero-copy h1 { margin: 24px 0 22px; max-width: 650px; font-family: Georgia, "Times New Roman", serif; font-size: clamp(47px, 5.3vw, 76px); line-height: .99; letter-spacing: -3.5px; font-weight: 500; color: #000; }
+:root[data-theme='dark'] .hero-copy h1 { color: #f1fff8; }
 .hero-copy > p { max-width: 610px; color: var(--muted); font-size: 18px; line-height: 1.72; }
 .hero-actions { display: flex; align-items: center; gap: 24px; margin-top: 32px; }
 .text-link { color: var(--green-dark); font-weight: 750; font-size: 14px; text-underline-offset: 4px; }
