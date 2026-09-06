@@ -1,5 +1,6 @@
-import { can, hasRole } from "./policy";
-import { PERMISSIONS, ROLES } from "./permissions";
+import { can } from "./policy";
+import { PERMISSIONS } from "./permissions";
+import { hasFollowUpCreatorRole } from "@/config/followUps";
 import type { UserAuthorization } from "@/types/authorization";
 
 export type MobileAccessDecision =
@@ -11,7 +12,7 @@ export function decideMobileAccess(
   if (!authorization.profile || authorization.profile.status !== "active") {
     return "disabled";
   }
-  if (!hasRole(authorization.roles, ROLES.SALES_EXECUTIVE)) {
+  if (!hasFollowUpCreatorRole(authorization.roles)) {
     return "unsupported-role";
   }
   if (!can(authorization.permissions, PERMISSIONS.CONSOLE_ACCESS)) {

@@ -16,9 +16,18 @@ function access(overrides: Partial<UserAuthorization> = {}): UserAuthorization {
   };
 }
 
-describe("Sales Executive mobile restriction", () => {
-  it("allows an active Sales Executive with console access", () => {
-    expect(decideMobileAccess(access())).toBe("allowed");
+describe("operational Follow Up role mobile access", () => {
+  it.each([
+    ["sales_executive", "Sales Executive"],
+    ["marketing_executive", "Marketing Executive"],
+    ["sales_manager", "Sales Manager"],
+    ["delivery_manager", "Delivery Manager"],
+  ])("allows an active %s with console access", (slug, name) => {
+    expect(
+      decideMobileAccess(
+        access({ roles: [{ id: `role-${slug}`, slug, name }] }),
+      ),
+    ).toBe("allowed");
   });
 
   it("denies inactive users", () => {
@@ -29,12 +38,12 @@ describe("Sales Executive mobile restriction", () => {
     ).toBe("disabled");
   });
 
-  it("shows the unsupported experience for other roles", () => {
+  it("shows the unsupported experience for roles outside the mobile scope", () => {
     expect(
       decideMobileAccess(
         access({
           roles: [
-            { id: "role-2", slug: "sales_manager", name: "Sales Manager" },
+            { id: "role-2", slug: "system_admin", name: "System Admin" },
           ],
         }),
       ),

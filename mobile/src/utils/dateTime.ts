@@ -57,11 +57,21 @@ export function localDateTimeToIso(dateText: string, timeText: string): string |
   return date.toISOString();
 }
 
-export function defaultFollowUpFields(now = new Date()): { date: string; time: string } {
-  const date = new Date(now.getTime() + 60 * 60 * 1000);
+export function followUpFieldsFromDate(date: Date): { date: string; time: string } {
   const two = (value: number) => String(value).padStart(2, "0");
   return {
     date: `${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())}`,
     time: `${two(date.getHours())}:${two(date.getMinutes())}`,
   };
+}
+
+export function defaultFollowUpFields(now = new Date()): { date: string; time: string } {
+  return followUpFieldsFromDate(new Date(now.getTime() + 60 * 60 * 1000));
+}
+
+export function followUpFieldsFromIso(value: string): { date: string; time: string } {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? { date: "", time: "" }
+    : followUpFieldsFromDate(date);
 }

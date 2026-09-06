@@ -2,11 +2,14 @@ import { supabase } from "./supabase";
 import type {
   BusinessArea,
   CaseSummary,
+  CompleteFollowUpResult,
   CreateFollowUpInput,
   DashboardData,
   FollowUp,
+  FollowUpTicketOption,
   PipelineBoard,
   TicketDetail,
+  UpdateFollowUpInput,
 } from "@/types/crm";
 
 function safeMessage(error: { message?: string } | null, fallback: string): string {
@@ -32,23 +35,9 @@ async function rpc<T>(
   return data as T;
 }
 
-async function currentAssignedTicketIds(): Promise<Set<string>> {
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData.user) {
-    throw new Error(safeMessage(userError, "Your session could not be verified."));
-  }
-  const { data, error } = await supabase
-    .from("crm_ticket_assignments")
-    .select("ticket_id")
-    .eq("user_id", userData.user.id)
-    .is("removed_at", null);
-  if (error) throw new Error(safeMessage(error, "Assignments could not be loaded."));
-  return new Set((data ?? []).map((item) => item.ticket_id));
-}
-
 export const crmService = Object.freeze({
   async dashboard(): Promise<DashboardData> {
-    const [pipeline, pendingFollowUps, notifications, assignedTicketIds] = await Promise.all([
+    const [pipeline, pendingFollowUps, notifications] = await Promise.all([
       rpc<PipelineBoard>("get_crm_pipeline_board", {
         p_pipeline_id: null,
         p_search: "",
@@ -68,15 +57,8 @@ export const crmService = Object.freeze({
       rpc<DashboardData["notifications"]>("get_user_notifications", {
         p_limit: 10,
       }),
-      currentAssignedTicketIds(),
     ]);
-    return {
-      pipeline,
-      pendingFollowUps: pendingFollowUps.filter((item) =>
-        assignedTicketIds.has(item.ticketId),
-      ),
-      notifications,
-    };
+    return { pipeline, pendingFollowUps, notifications };
   },
 
   listCases(area: BusinessArea, search = ""): Promise<CaseSummary[]> {
@@ -109,12 +91,11 @@ export const crmService = Object.freeze({
     });
   },
 
-  async listAssignedFollowUps(status: string | null = null): Promise<FollowUp[]> {
-    const [followUps, assignedTicketIds] = await Promise.all([
-      this.listFollowUps(status),
-      currentAssignedTicketIds(),
-    ]);
-    return followUps.filter((item) => assignedTicketIds.has(item.ticketId));
+  searchFollowUpTickets(search = "", limit = 30): Promise<FollowUpTicketOption[]> {
+    return rpc("search_crm_follow_up_tickets", {
+      p_search: search.trim(),
+      p_limit: limit,
+    });
   },
 
   createFollowUp(input: CreateFollowUpInput): Promise<{ id: string; duplicate: boolean }> {
@@ -129,12 +110,26 @@ export const crmService = Object.freeze({
     });
   },
 
-  completeFollowUp(followUpId: string): Promise<unknown> {
+  updateFollowUp(followUpId: string, input: UpdateFollowUpInput): Promise<{ id: string }> {
+    return rpc("update_crm_follow_up", {
+      p_follow_up_id: followUpId,
+      p_scheduled_at: input.scheduledAt,
+      p_type: input.type,
+      p_purpose: input.purpose?.trim() || null,
+      p_frequency: input.recurring ? input.frequency : null,
+    });
+  },
+
+  completeFollowUp(followUpId: string): Promise<CompleteFollowUpResult> {
     return rpc("complete_crm_follow_up", { p_follow_up_id: followUpId });
   },
 
   cancelFollowUp(followUpId: string): Promise<unknown> {
     return rpc("cancel_crm_follow_up", { p_follow_up_id: followUpId });
+  },
+
+  stopFollowUpSeries(seriesId: string): Promise<unknown> {
+    return rpc("stop_crm_follow_up_series", { p_series_id: seriesId });
   },
 
   loadPipeline(search = ""): Promise<PipelineBoard> {

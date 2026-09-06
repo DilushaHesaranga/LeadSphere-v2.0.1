@@ -96,6 +96,15 @@ export interface FollowUp {
   completedAt: string | null;
 }
 
+export interface FollowUpTicketOption {
+  id: string;
+  number: string;
+  title: string;
+  companyName: string;
+  department: string;
+  stage: string;
+}
+
 export interface PipelineStage {
   slug: string;
   name: string;
@@ -167,4 +176,17 @@ export interface CreateFollowUpInput {
   recurring: boolean;
   frequency?: RecurrenceFrequency;
   clientRequestId: string;
+}
+
+export interface UpdateFollowUpInput {
+  scheduledAt: string;
+  type: FollowUpType;
+  purpose?: string;
+  recurring: boolean;
+  frequency?: RecurrenceFrequency;
+}
+
+export interface CompleteFollowUpResult {
+  completed: boolean;
+  nextFollowUpId: string | null;
 }

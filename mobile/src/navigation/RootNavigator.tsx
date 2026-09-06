@@ -151,7 +151,7 @@ export function RootNavigator() {
     return (
       <StateView
         title="Role not supported yet"
-        description={`LeadSphere Mobile currently supports Sales Executives only. Your active role${roleNames ? ` is ${roleNames}` : " is not supported"}.`}
+        description={`LeadSphere Mobile currently supports Sales Executives, Marketing Executives, Sales Managers, and Delivery Managers. Your active role${roleNames ? ` is ${roleNames}` : " is not supported"}.`}
         actionLabel="Sign out"
         onAction={() => void signOut()}
       />

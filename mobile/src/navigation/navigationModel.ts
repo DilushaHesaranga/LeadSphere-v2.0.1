@@ -11,7 +11,7 @@ export interface MobileNavigationItem {
 const IMPLEMENTED_ITEMS: readonly MobileNavigationItem[] = Object.freeze([
   { key: "Home", label: "Home", permission: PERMISSIONS.CONSOLE_ACCESS },
   { key: "Work", label: "Work", permission: PERMISSIONS.TICKETS_READ },
-  { key: "FollowUps", label: "Follow Ups", permission: PERMISSIONS.FOLLOWUPS_READ },
+  { key: "FollowUps", label: "Follow Ups", permission: PERMISSIONS.TICKETS_READ },
   { key: "Pipeline", label: "Pipeline", permission: PERMISSIONS.PIPELINE_READ },
   { key: "Profile", label: "Profile" },
 ]);

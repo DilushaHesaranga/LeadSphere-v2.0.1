@@ -1,5 +1,6 @@
 import {
   defaultFollowUpFields,
+  followUpFieldsFromIso,
   isOverdue,
   isToday,
   localDateTimeToIso,
@@ -26,5 +27,13 @@ describe("mobile sales date and time handling", () => {
   it("defaults a new follow-up one hour into the future", () => {
     const fields = defaultFollowUpFields(new Date(2026, 7, 17, 23, 30));
     expect(fields).toEqual({ date: "2026-08-18", time: "00:30" });
+  });
+
+  it("converts an existing UTC Follow Up into editable local fields", () => {
+    const value = new Date(2026, 7, 17, 14, 30).toISOString();
+    expect(followUpFieldsFromIso(value)).toEqual({
+      date: "2026-08-17",
+      time: "14:30",
+    });
   });
 });

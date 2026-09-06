@@ -1,8 +1,8 @@
 # LeadSphere Mobile
 
-LeadSphere Mobile is an Expo/React Native TypeScript application for Android and iOS. The current field-sales release supports Sales Executive authentication, a live daily dashboard, searchable lead/customer Tickets, Ticket details and notes, Follow Ups, and the sales pipeline. Firebase Hosting continues to host only the React web application; native builds are APK/AAB and IPA artifacts.
+LeadSphere Mobile is an Expo/React Native TypeScript application for Android and iOS. The current operational release supports Sales Executive, Marketing Executive, Sales Manager, and Delivery Manager authentication, a live daily dashboard, searchable lead/customer Tickets, Ticket details and notes, the complete Follow Up workflow, and the sales pipeline. Firebase Hosting continues to host only the React web application; native builds are APK/AAB and IPA artifacts.
 
-## Verified Sales Executive feature inventory
+## Verified mobile feature inventory
 
 The repository was inspected before mobile implementation.
 
@@ -12,13 +12,13 @@ The repository was inspected before mobile implementation.
 | Password recovery                   | Implemented on web                                           | Implemented with `leadsphere://reset-password` deep link                                  |
 | Session restoration/refresh/logout  | Implemented on web                                           | Implemented with encrypted native persistence and AppState refresh control                |
 | Trusted profile, roles, permissions | Implemented in PostgreSQL and NestJS `/api/authorization/me` | Implemented; mobile never trusts user metadata                                            |
-| Role restriction                    | RBAC implemented                                             | Mobile permits active `sales_executive` accounts only and provides logout for other roles |
+| Role restriction                    | RBAC implemented                                             | Mobile permits active `sales_executive`, `marketing_executive`, `sales_manager`, and `delivery_manager` accounts with trusted console access |
 | Overview                            | Ticket, Follow Up, pipeline, and notification RPCs           | Live daily metrics, next actions, and notifications                                       |
 | Profile/access summary              | Web header displays trusted profile/role                     | Implemented as Profile with logout                                                        |
 | Leads                               | Implemented as pre-Sales-Order Tickets with PostgreSQL RLS   | Searchable lead Ticket list and detail                                                    |
 | Customers/accounts/contacts         | Implemented as Sales-Order-or-later Tickets and Case contacts | Searchable customer Ticket list with call/email actions                                  |
 | Deals/pipeline                      | Implemented with versioned, idempotent stage RPCs            | Mobile pipeline view and guarded stage movement                                           |
-| Activities/follow-ups/reminders     | Implemented with recurring Follow Up RPCs and reminders      | Pending/completed lists; create, complete, and cancel actions                             |
+| Follow Ups and reminders            | Implemented with recurring Follow Up RPCs and reminders      | Global and per-Ticket All/Pending/Completed/Cancelled views; authorized Ticket search; Call/Email/Meeting creation; edit, complete, cancel, stop-series, recurrence, direct Ticket navigation, and persisted push reminders |
 | Team Management                     | Implemented, but Sales Executives have no permission         | Not exposed                                                                               |
 
 The mobile application uses the same security-definer RPCs, assignment checks, RLS, optimistic versions, and idempotency keys as the web application. It does not duplicate server business rules or introduce mobile-only records.
@@ -66,7 +66,7 @@ The hosted API is `https://leadsphere-api.vercel.app`. For local backend develop
 - When a read fails specifically because connectivity is unavailable, the latest encrypted cached result is shown with its timestamp.
 - Authorization, validation, and permission failures never fall back to cached data.
 - Cached CRM data is removed when the user signs out.
-- Notes, Follow Ups, completions, cancellations, and stage movements are never shown as synchronized until the server confirms them.
+- Notes, Follow Up creates/edits/completions/cancellations/series stops, and stage movements are never shown as synchronized until the server confirms them.
 - Follow Up creation and stage movement reuse the database idempotency contracts. Other mutations are not queued offline because their current server contracts do not provide safe replay identifiers.
 
 ## Supabase setup
@@ -169,7 +169,7 @@ npm run build:all
 
 ## Current product boundaries
 
-Orders/products, GPS visit tracking, territories, targets, revenue performance, and native push notification registration are not implemented because the repository does not yet contain authoritative tables and APIs for those concepts. In-app notification data is visible on the dashboard. Add each future module to the backend/RLS contract before exposing it in the mobile app.
+Orders/products, GPS visit tracking, territories, targets, and revenue performance are not implemented because the repository does not yet contain authoritative tables and APIs for those concepts. In-app notification data is visible on the dashboard, and registered devices receive persisted server-generated push deliveries, including Follow Up reminders. Add each future module to the backend/RLS contract before exposing it in the mobile app.
 
 ## Adding other roles later
 

@@ -25,4 +25,7 @@ export const PERMISSIONS = Object.freeze({
 
 export const ROLES = Object.freeze({
   SALES_EXECUTIVE: "sales_executive",
+  MARKETING_EXECUTIVE: "marketing_executive",
+  SALES_MANAGER: "sales_manager",
+  DELIVERY_MANAGER: "delivery_manager",
 });
