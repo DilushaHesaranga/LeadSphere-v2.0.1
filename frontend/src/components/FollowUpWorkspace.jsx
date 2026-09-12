@@ -7,6 +7,7 @@ import { followUpService } from '../services/followUpService.js'
 import { navigate } from '../utils/router.js'
 import { ConfirmDialog } from './ConfirmDialog.jsx'
 import { FollowUpDialog } from './FollowUpDialog.jsx'
+import { FollowUpEmail } from './FollowUpEmail.jsx'
 import { Icon } from './Icons.jsx'
 import { StatusBadge } from './StatusBadge.jsx'
 
@@ -46,7 +47,7 @@ function groupFollowUps(items, ticket, global) {
   return [...groups.values()]
 }
 
-function FollowUpCard({ item, mayManage, busy, onEdit, onComplete, onCancel, onStop }) {
+function FollowUpCard({ item, ticket, mayManage, busy, onEdit, onComplete, onCancel, onStop }) {
   const pending = item.status === 'PENDING'
   const overdue = pending && new Date(item.scheduledAt).getTime() < Date.now()
   return <article className={`follow-up-card ${overdue ? 'overdue' : ''}`}>
@@ -63,6 +64,7 @@ function FollowUpCard({ item, mayManage, busy, onEdit, onComplete, onCancel, onS
         <div><dt>Schedule</dt><dd>{item.recurring ? followUpFrequencyLabel(item.frequency) : 'One-time'}{item.recurring && !item.seriesActive ? ' · Stopped' : ''}</dd></div>
         <div><dt>Created by</dt><dd>{item.createdByName}</dd></div>
       </dl>
+      {mayManage && pending && item.type === 'EMAIL' && <FollowUpEmail key={`${item.id}:${item.purpose}`} item={item} ticket={ticket} busy={busy}/>}
     </div>
     {mayManage && pending && <footer className="follow-up-actions">
       <button className="text-button" type="button" onClick={() => onEdit(item)} disabled={busy}>Edit</button>
@@ -85,7 +87,7 @@ function FollowUpBoard({ items, ticket, global, mayManage, busy, onEdit, onCompl
         <div className="follow-up-board">
           {group.items.map((item, index) => <div className="follow-up-stage" key={item.id}>
             <div className="follow-up-stage-title"><span>Follow-up {index + 1}</span><small>{typeLabel(item.type)}</small></div>
-            <FollowUpCard item={item} mayManage={mayManage} busy={busy} onEdit={onEdit} onComplete={onComplete} onCancel={onCancel} onStop={onStop}/>
+            <FollowUpCard item={item} ticket={ticket} mayManage={mayManage} busy={busy} onEdit={onEdit} onComplete={onComplete} onCancel={onCancel} onStop={onStop}/>
           </div>)}
         </div>
       </div>
