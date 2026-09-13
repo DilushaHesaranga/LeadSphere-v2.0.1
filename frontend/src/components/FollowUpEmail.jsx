@@ -3,8 +3,8 @@ import { createFollowUpEmail, gmailComposeUrl } from '../config/followUpEmail.js
 import { caseTicketService } from '../services/caseTicketService.js'
 import { Icon } from './Icons.jsx'
 
-export function FollowUpEmail({ item, ticket, busy }) {
-  const [draft, setDraft] = useState(() => createFollowUpEmail(item, ticket))
+export function FollowUpEmail({ item, ticket, busy, initialDraft = null }) {
+  const [draft, setDraft] = useState(() => ({ ...createFollowUpEmail(item, ticket), ...initialDraft }))
   const [contacts, setContacts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -48,5 +48,3 @@ export function FollowUpEmail({ item, ticket, busy }) {
     <button className="button button-primary button-small" type="submit" disabled={busy || loading}><Icon name="mail" size={14}/>Send email</button>
   </form>
 }
-
-

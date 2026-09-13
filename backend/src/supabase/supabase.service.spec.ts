@@ -49,3 +49,53 @@ describe('SupabaseService', () => {
     });
   });
 });
+
+// Assistant context must retain auth.uid() and database authorization.
+describe('SupabaseService caller-scoped RPC', () => {
+  beforeEach(() => {
+    process.env.SUPABASE_URL = 'https://project.supabase.co';
+    process.env.SUPABASE_PUBLISHABLE_KEY = 'public-key';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'must-not-be-used';
+  });
+  afterEach(() => jest.restoreAllMocks());
+  it('passes the caller JWT and publishable key, never the service-role key', async () => {
+    const mock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValue(new Response(JSON.stringify({ id: 'ticket' })));
+    await new SupabaseService().userRpc(
+      'get_crm_ticket',
+      { p_ticket_id: 'ticket' },
+      'caller-jwt',
+    );
+    expect(mock).toHaveBeenCalledWith(
+      'https://project.supabase.co/rest/v1/rpc/get_crm_ticket',
+      expect.objectContaining({
+        method: 'POST',
+        headers: {
+          apikey: 'public-key',
+          Authorization: 'Bearer caller-jwt',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ p_ticket_id: 'ticket' }),
+      }),
+    );
+  });
+  it('preserves access denial and does not expose raw database errors', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          message: 'Ticket not found or access denied',
+          secret: 'database detail',
+        }),
+        { status: 400 },
+      ),
+    );
+    await expect(
+      new SupabaseService().userRpc(
+        'get_crm_ticket',
+        { p_ticket_id: 'ticket' },
+        'caller-jwt',
+      ),
+    ).rejects.toThrow('Ticket not found or access denied.');
+  });
+});

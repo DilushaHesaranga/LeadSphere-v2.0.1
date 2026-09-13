@@ -1,3 +1,4 @@
+import { AssistantPanel } from '../components/AssistantPanel.jsx'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { PERMISSIONS } from '../auth/permissions.js'
@@ -102,6 +103,7 @@ export function TicketDetailPage({ ticketId }) {
   const { can, user } = useAuth()
   const tabRefs = useRef([])
   const [activeTab, setActiveTab] = useState('overview')
+  const [assistantOpen, setAssistantOpen] = useState(false)
   const [ticket, setTicket] = useState(null)
   const [reference, setReference] = useState({ departments: [], stages: [], managers: [] })
   const [loading, setLoading] = useState(true)
@@ -210,6 +212,7 @@ export function TicketDetailPage({ ticketId }) {
         <div className="ticket-badges"><StatusBadge value={ticket.stage} kind="stage"/><StatusBadge value={ticket.status}/><StatusBadge value={ticket.currentDepartment} kind="department"/></div>
       </div>
       <div className="ticket-primary-actions">
+        {import.meta.env.VITE_AI_ASSISTANT_ENABLED !== 'false' && <button type="button" className="button button-secondary assistant-trigger" onClick={() => setAssistantOpen(true)}><Icon name="message" size={17}/>AI Assistant</button>}
         <button className="button button-secondary" disabled={!emails.length} onClick={() => openContact('email')} title={!emails.length ? 'No email address is available' : ''}><Icon name="mail" size={17}/>Email</button>
         <button className="button button-secondary" disabled={!phones.length} onClick={() => openContact('phone')} title={!phones.length ? 'No phone number is available' : ''}><Icon name="phone" size={17}/>Call</button>
         {maySelfAssign && <button className="button button-secondary" disabled={!active || alreadyAssigned || pendingAssignment} onClick={() => setConfirmAction('assign')}><Icon name="users" size={17}/>{alreadyAssigned ? 'Already Assigned' : pendingAssignment ? 'Assignment Pending' : 'Assign to Me'}</button>}
@@ -230,6 +233,7 @@ export function TicketDetailPage({ ticketId }) {
       {activeTab === 'follow-ups' && <FollowUpWorkspace ticket={ticket}/>}
       {activeTab === 'timeline' && <TimelineWorkspace ticket={ticket}/>}
     </div>
+    {assistantOpen && <AssistantPanel key={ticket.id} ticket={ticket} onClose={() => setAssistantOpen(false)} onSource={(source) => { if (TICKET_TABS.some(([tab]) => tab === source.tab)) { setActiveTab(source.tab); setAssistantOpen(false); window.requestAnimationFrame(() => document.getElementById(`ticket-tab-${source.tab}`)?.focus()) } }}/>}
     {contactDialog && <ContactMethodDialog contacts={ticket.contacts} type={contactDialog} onClose={() => setContactDialog('')} onSelect={(method) => launchContact(contactDialog, method, true)}/>}
     {assignmentDialog && <AssigneeManagerDialog
       users={reference.assignees ?? []}

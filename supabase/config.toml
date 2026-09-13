@@ -1,0 +1,7 @@
+project_id = "leadsphere-v2-0-1"
+
+# Only the new assistant is configured here; existing functions are unchanged.
+[functions.ai-assistant]
+# The handler explicitly verifies the user using /auth/v1/user on every request.
+# This also supports projects using asymmetric signing keys.
+verify_jwt = false

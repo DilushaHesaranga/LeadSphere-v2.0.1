@@ -1,3 +1,5 @@
+import { AssistantController } from './assistant/assistant.controller';
+import { AssistantService } from './assistant/assistant.service';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
@@ -20,8 +22,14 @@ import { validateBackendEnvironment } from './app.setup';
       validate: validateBackendEnvironment,
     }),
   ],
-  controllers: [AppController, AuthorizationController, TeamController],
+  controllers: [
+    AssistantController,
+    AppController,
+    AuthorizationController,
+    TeamController,
+  ],
   providers: [
+    AssistantService,
     AppService,
     AuthorizationService,
     DataScopeResolver,

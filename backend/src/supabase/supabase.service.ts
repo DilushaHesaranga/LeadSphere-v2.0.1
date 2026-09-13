@@ -1,5 +1,6 @@
 import {
   BadGatewayException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
@@ -92,6 +93,45 @@ export class SupabaseService {
     });
   }
 
+  // Keep ticket scope and auth.uid() identical to requests from the frontend.
+  async userRpc(
+    name: 'get_crm_ticket' | 'list_crm_follow_ups',
+    body: Record<string, unknown>,
+    accessToken: string,
+  ): Promise<unknown> {
+    const response = await fetch(`${this.url}/rest/v1/rpc/${name}`, {
+      method: 'POST',
+      signal: AbortSignal.timeout(8000),
+      headers: {
+        apikey: this.publishableKey,
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    }).catch(() => {
+      throw new BadGatewayException(
+        'Ticket information is temporarily unavailable.',
+      );
+    });
+    if (!response.ok) {
+      if (response.status === 401)
+        throw new UnauthorizedException(
+          'Your session has expired. Please sign in again.',
+        );
+      const details = (await response
+        .json()
+        .catch(() => ({}))) as SupabaseErrorBody;
+      if (
+        response.status === 403 ||
+        /access denied|not found|Permission denied/i.test(details.message ?? '')
+      )
+        throw new ForbiddenException('Ticket not found or access denied.');
+      throw new BadGatewayException(
+        'Ticket information is temporarily unavailable.',
+      );
+    }
+    return response.json() as Promise<unknown>;
+  }
   async inviteUser(
     email: string,
     redirectTo: string,

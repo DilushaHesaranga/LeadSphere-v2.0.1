@@ -616,3 +616,34 @@ button.assignee-chip { cursor:pointer; }.assignee-chip.removable:hover { border-
   .contact-form-heading { align-items:stretch;flex-direction:column; }.contact-form-heading .button { width:100%; }
   .follow-up-board { grid-auto-columns:235px; }.follow-up-actions { display:grid;grid-template-columns:1fr 1fr; }.follow-up-actions .button { grid-column:1/-1; }.follow-up-selected-ticket { grid-template-columns:1fr; }.follow-up-selected-ticket > *,.follow-up-selected-ticket strong,.follow-up-selected-ticket small,.follow-up-selected-ticket .text-button { grid-column:1;grid-row:auto;margin-left:0; }
 }
+
+/* Optional ticket assistant: a separate panel that never blocks CRM data loading. */
+.assistant-shell .modal-backdrop { display:flex;justify-content:flex-end;padding:0; }
+.assistant-shell .modal { width:min(540px,100vw);max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0;margin:0;padding:24px;overflow-y:auto; }
+.assistant-ticket { display:flex;gap:10px;align-items:center;padding:12px;background:var(--surface-soft);border:1px solid var(--line);border-radius:9px; }
+.assistant-ticket strong,.assistant-ticket small { display:block;overflow-wrap:anywhere; }
+.assistant-ticket small { margin-top:4px;color:var(--muted);font-size:11px; }
+.assistant-intro { color:var(--muted);font-size:13px;line-height:1.6; }
+.assistant-quick-actions { display:flex;flex-wrap:wrap;gap:8px;margin:16px 0; }
+.assistant-conversation { display:grid;gap:14px; }
+.assistant-empty { text-align:center;color:var(--muted);padding:28px 12px; }
+.assistant-empty h3 { color:var(--ink);font-size:16px; }.assistant-empty p { font-size:13px;line-height:1.6; }
+.assistant-message { border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0; }
+.assistant-message.user { background:var(--accent-soft);margin-left:32px; }
+.assistant-message.assistant { background:var(--surface-soft); }
+.assistant-message header { display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px; }
+.assistant-message time { margin-left:auto;color:var(--muted);font-size:10px; }
+.assistant-answer { white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.7; }
+.assistant-answer-actions { display:flex;gap:10px;justify-content:space-between;align-items:center;font-size:10px;color:var(--muted); }
+.assistant-sources,.assistant-scope { margin-top:12px;font-size:11px; }
+.assistant-sources summary,.assistant-scope summary { cursor:pointer;color:var(--accent); }
+.assistant-sources > div { padding:10px 0;border-bottom:1px solid var(--line); }
+.assistant-sources p,.assistant-scope p { color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6; }
+.assistant-sources .inline-link { text-align:left; }
+.assistant-composer { margin-top:18px;border-top:1px solid var(--line);padding-top:16px; }
+.assistant-composer textarea { width:100%;resize:vertical; }
+.assistant-composer > div { display:flex;justify-content:space-between;align-items:center;margin-top:8px; }
+.assistant-composer small,.assistant-footer { font-size:11px;color:var(--muted); }
+.assistant-footer { line-height:1.6; }
+.assistant-unavailable { padding:15px;border:1px solid var(--line);border-radius:9px;background:var(--surface-soft);font-size:13px;line-height:1.6; }
+@media (max-width:560px) { .assistant-shell .modal { padding:18px; }.assistant-quick-actions .button { flex:1 1 auto; } }

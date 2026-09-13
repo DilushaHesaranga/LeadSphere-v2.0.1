@@ -1,5 +1,6 @@
 export const PERMISSIONS = {
   CONSOLE_ACCESS: 'console.access',
+  TICKETS_READ: 'tickets.read',
   TEAM_MEMBERS_READ: 'team.members.read',
   TEAM_MEMBERS_INVITE: 'team.members.invite',
   TEAM_MEMBERS_ASSIGN_ROLE: 'team.members.assign_role',
