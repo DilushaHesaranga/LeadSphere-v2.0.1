@@ -68,7 +68,9 @@ export function createAssistantHandler(deps: Dependencies) {
           const details = asRow(await result.json().catch(() => ({})));
           if (result.status === 401) throw new RequestError(401, 'Your session has expired. Please sign in again.');
           if (result.status === 403 || /not found or access denied|Permission denied/i.test(String(details.message))) throw new RequestError(403, 'Ticket not found or access denied.');
-          throw new RequestError(503, UNAVAILABLE);
+          throw new RequestError(503, name === 'claim_ai_assistant_request'
+            ? 'AI Assistant could not check its usage limits. Ask your administrator to check the assistant database setup.'
+            : 'AI Assistant could not load the ticket records. Please try again or contact your administrator.');
         }
         return result.json() as Promise<unknown>;
       };
@@ -92,7 +94,19 @@ export function createAssistantHandler(deps: Dependencies) {
             text: { format: { type: 'json_schema', name: 'ticket_assistant', strict: true, schema: RESPONSE_SCHEMA } },
           }),
         });
-        if (!result.ok) throw new RequestError(503, UNAVAILABLE);
+        if (!result.ok) {
+          // Never expose provider messages: they can contain credentials or request data.
+          const details = asRow(asRow(await result.json().catch(() => ({}))).error);
+          if (details.code === 'credit_balance_exhausted') throw new RequestError(503, 'AI Assistant has run out of OpenAI API credit. Ask your administrator to add credit in OpenAI API billing. All CRM features remain available.');
+          if (details.code === 'project_spend_limit_exceeded' || details.code === 'organization_spend_limit_exceeded') throw new RequestError(503, 'AI Assistant has reached its OpenAI spending limit. Ask your administrator to review the project or organization spending limit. All CRM features remain available.');
+          if (details.code === 'organization_usage_limit_exceeded') throw new RequestError(503, 'AI Assistant has reached its OpenAI usage allowance. Ask your administrator to review the organization usage limit. All CRM features remain available.');
+          if (details.code === 'insufficient_quota' || details.type === 'insufficient_quota') throw new RequestError(503, 'AI Assistant has no available API quota. Ask your administrator to check OpenAI API billing and project limits. All CRM features remain available.');
+          if (result.status === 401) throw new RequestError(503, 'AI Assistant could not authenticate with its provider. Ask your administrator to update the OpenAI API key in Supabase.');
+          if (result.status === 429) throw new RequestError(429, 'The AI provider is currently rate limited. Please wait a moment and try again.');
+          if (result.status === 403 || result.status === 404) throw new RequestError(503, 'AI Assistant cannot access its configured model. Ask your administrator to check the OpenAI model and project permissions.');
+          if (result.status === 400) throw new RequestError(503, 'The AI provider rejected the assistant configuration. Ask your administrator to check the model settings.');
+          throw new RequestError(503, UNAVAILABLE);
+        }
         const payload = asRow(await result.json());
         if (payload.status !== 'completed' || !Array.isArray(payload.output)) throw new RequestError(503, UNAVAILABLE);
         const text = payload.output.map(asRow).filter((item) => item.type === 'message').flatMap((item) => Array.isArray(item.content) ? item.content.map(asRow) : []).filter((item) => item.type === 'output_text').map((item) => String(item.text)).join('');

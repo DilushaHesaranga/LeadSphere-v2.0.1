@@ -73,6 +73,40 @@ test('provider failure releases the lease and returns a safe error', async () =>
   assert.equal(response.status, 503); assert.ok(!(await response.text()).includes('private upstream detail'));
   assert.ok(calls.at(-1).url.endsWith('/release_ai_assistant_request'));
 });
+
+test('provider configuration, quota and transient failures have safe actionable messages', async () => {
+  for (const [status, code, expected] of [
+    [429, 'insufficient_quota', /API quota/],
+    [429, 'credit_balance_exhausted', /API credit/],
+    [429, 'project_spend_limit_exceeded', /spending limit/],
+    [429, 'organization_spend_limit_exceeded', /spending limit/],
+    [429, 'organization_usage_limit_exceeded', /usage allowance/],
+    [401, 'invalid_api_key', /API key in Supabase/],
+    [429, 'rate_limit_exceeded', /wait a moment/],
+    [403, 'permission_denied', /model and project permissions/],
+    [404, 'model_not_found', /model and project permissions/],
+    [400, 'invalid_request_error', /model settings/],
+    [500, 'server_error', /temporarily unavailable/],
+  ]) {
+    const { handler, calls } = fixture({ '/responses': () => Response.json({ error: { code, message: 'private upstream detail' } }, { status }) });
+    const response = await handler(request({ action: 'ask', ticketId, mode: 'summary' }));
+    assert.equal(response.status, code === 'rate_limit_exceeded' ? 429 : 503);
+    const { message } = await response.json();
+    assert.match(message, expected);
+    assert.ok(!message.includes('private upstream detail'));
+    assert.ok(calls.at(-1).url.endsWith('/release_ai_assistant_request'));
+  }
+});
+
+test('database setup errors are distinguishable and never expose database details', async () => {
+  const { handler, calls } = fixture({ '/claim_ai_assistant_request': () => Response.json({ message: 'private SQL detail' }, { status: 400 }) });
+  const response = await handler(request({ action: 'ask', ticketId, mode: 'summary' }));
+  assert.equal(response.status, 503);
+  const { message } = await response.json();
+  assert.match(message, /database setup/);
+  assert.ok(!message.includes('private SQL detail'));
+  assert.ok(!calls.some((call) => call.url.endsWith('/responses')));
+});
 test('invalid inputs and oversized bodies are rejected before ticket retrieval', async () => {
   const { handler, calls } = fixture();
   assert.equal((await handler(request({ action: 'ask', ticketId: 'invalid', mode: 'summary' }))).status, 400);

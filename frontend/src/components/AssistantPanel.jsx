@@ -31,8 +31,11 @@ export function AssistantPanel({ ticket, onClose, onSource }) {
     try {
       const result = await assistantService.status(AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]))
       if (!controller.signal.aborted) setAvailability(result.available === true)
-    } catch {
-      if (!controller.signal.aborted) { setAvailability(false); setStatusError(unavailable) }
+    } catch (failure) {
+      if (!controller.signal.aborted) {
+        setAvailability(false)
+        setStatusError(failure.name === 'TimeoutError' || failure instanceof TypeError ? unavailable : failure.message || unavailable)
+      }
     }
   }, [])
 
