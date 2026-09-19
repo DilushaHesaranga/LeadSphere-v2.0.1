@@ -9,6 +9,7 @@ export const PERMISSIONS = Object.freeze({
   CUSTOMER_CONTEXT_READ: 'customer_context.read',
   ACTIVITIES_READ: 'activities.read',
   REPORTS_READ: 'reports.read',
+  DASHBOARDS_READ: 'dashboards.read',
   PIPELINE_READ: 'pipeline.read',
   PIPELINE_CONFIGURE: 'pipeline.configure',
   DEALS_MOVE_STAGE: 'deals.move_stage',

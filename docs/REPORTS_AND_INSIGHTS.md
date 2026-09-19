@@ -1,3 +1,4 @@
+
 # Reports & Insights
 
 Reports & Insights is LeadSphere's permission-aware reporting workspace. It aggregates the existing Ticket, pipeline, assignment, activity, and Follow Up data in PostgreSQL and exposes only records available through the signed-in user's `reports.read` scope.

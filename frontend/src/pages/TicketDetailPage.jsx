@@ -5,6 +5,7 @@ import { PERMISSIONS } from '../auth/permissions.js'
 import { AssigneeManagerDialog } from '../components/AssigneeManagerDialog.jsx'
 import { FollowUpWorkspace } from '../components/FollowUpWorkspace.jsx'
 import { TimelineWorkspace } from '../components/TimelineWorkspace.jsx'
+import { TicketSalesPanel } from '../components/TicketSalesPanel.jsx'
 import { ConfirmDialog } from '../components/ConfirmDialog.jsx'
 import { ContactMethodDialog } from '../components/ContactMethodDialog.jsx'
 import { DeletionRequestDialog } from '../components/DeletionRequestDialog.jsx'
@@ -225,7 +226,7 @@ export function TicketDetailPage({ ticketId }) {
     {!active && <div className="closed-notice"><Icon name="lock" size={18}/><span>This Ticket is {ticket.status}. Its contacts, notes, requests, and history remain available, but working actions are restricted.</span></div>}
     <nav className="ticket-tabs" role="tablist" aria-label="Ticket details">{TICKET_TABS.map(([slug, label], index) => <button key={slug} ref={(node) => { tabRefs.current[index] = node }} id={`ticket-tab-${slug}`} role="tab" aria-selected={activeTab === slug} aria-controls={`ticket-panel-${slug}`} tabIndex={activeTab === slug ? 0 : -1} className={activeTab === slug ? 'active' : ''} onClick={() => setActiveTab(slug)} onKeyDown={(event) => selectAdjacentTab(event, index)}>{label}</button>)}</nav>
     <div id={`ticket-panel-${activeTab}`} role="tabpanel" aria-labelledby={`ticket-tab-${activeTab}`} className="ticket-tab-panel">
-      {activeTab === 'overview' && <TicketOverview ticket={ticket} reference={reference} mayUpdate={mayUpdate} mayMoveStage={mayMoveStage} busy={busy} onSave={(input) => execute(() => caseTicketService.updateTicket(ticketId, input), 'Ticket updated.')}/>}
+      {activeTab === 'overview' && <><TicketOverview ticket={ticket} reference={reference} mayUpdate={mayUpdate} mayMoveStage={mayMoveStage} busy={busy} onSave={(input) => execute(() => caseTicketService.updateTicket(ticketId, input), 'Ticket updated.')}/><TicketSalesPanel key={ticket.id} ticketId={ticket.id} mayUpdate={mayUpdate}/></>}
       {activeTab === 'contacts' && <ContactsTab ticket={ticket}/>}
       {activeTab === 'notes' && <NotesTab ticket={ticket} mayNote={mayNote} active={active} note={note} setNote={setNote} busy={busy} onSubmit={addNote}/>}
       {activeTab === 'activity' && <ActivityTab ticket={ticket} stageHistory={stageHistory} historyLoading={historyLoading} historyError={historyError} onRetry={loadStageHistory}/>}

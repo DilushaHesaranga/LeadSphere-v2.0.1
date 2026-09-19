@@ -1,0 +1,19 @@
+.ticket-sales-panel { margin-top: 20px; }
+.ticket-sales-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.ticket-sales-heading p { line-height: 1.6; max-width: 580px; }
+.ticket-sales-heading > button { flex-shrink: 0; }
+.ticket-sales-body { padding: 24px; }
+.ticket-sales-body > p { margin: 0; color: var(--muted); font-size: 13px; }
+.ticket-sales-current { display: grid; gap: 8px; }
+.ticket-sales-current strong { font-size: clamp(22px, 3vw, 30px); font-weight: 750; letter-spacing: -.6px; overflow-wrap: anywhere; }
+.ticket-sales-current span { color: var(--muted); font-size: 12px; line-height: 1.6; }
+.ticket-sales-form { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
+.ticket-sales-fields { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 18px; max-width: 660px; }
+.ticket-sales-fields .field { margin: 0; }
+.ticket-sales-fields .field small { line-height: 1.6; }
+.ticket-sales-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+@media (max-width: 600px) {
+  .ticket-sales-heading { align-items: flex-start; flex-direction: column; }
+  .ticket-sales-fields { grid-template-columns: 1fr; }
+  .ticket-sales-body { padding: 20px; }
+}

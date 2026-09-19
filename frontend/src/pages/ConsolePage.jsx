@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { PERMISSIONS } from '../auth/permissions.js'
+import { canAccessDashboard } from '../auth/dashboardAccess.js'
 import { AccessDenied } from '../components/Authorization.jsx'
 import { Brand } from '../components/Brand.jsx'
 import { Icon } from '../components/Icons.jsx'
@@ -20,9 +21,11 @@ import { CasesPage } from './CasesPage.jsx'
 import { PipelinePage } from './PipelinePage.jsx'
 import { ReportsPage } from './ReportsPage.jsx'
 import { ReportDetailPage } from './ReportDetailPage.jsx'
+import { DashboardPage } from './DashboardPage.jsx'
 
 const baseNavigation = [
   { path: '/console', label: 'Overview', icon: 'grid', exact: true },
+  { path: '/console/dashboard', label: 'CRM Dashboard', icon: 'chart', exact: true, permission: PERMISSIONS.DASHBOARDS_READ, dashboard: true },
   { path: '/console/cases', label: 'Cases', icon: 'file' },
   { path: '/console/leads', label: 'Leads', icon: 'lead', anyPermission: [PERMISSIONS.LEADS_READ, PERMISSIONS.TICKETS_READ] },
   { path: '/console/customers', label: 'Customers', icon: 'users', anyPermission: [PERMISSIONS.ACCOUNTS_READ, PERMISSIONS.CUSTOMER_CONTEXT_READ, PERMISSIONS.TICKETS_READ] },
@@ -75,6 +78,7 @@ export function ConsolePage({ pathname }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [pendingRequestCount, setPendingRequestCount] = useState(0)
   const userId = session?.user?.id
+  const mayViewDashboard = canAccessDashboard(roles, permissionScopes)
   const mayReviewRequests = canAccessNavigation(baseNavigation.find((item) => item.path === '/console/permissions'), permissionScopes)
 
   const loadPendingRequestCount = useCallback(async () => {
@@ -107,7 +111,7 @@ export function ConsolePage({ pathname }) {
   if (loading) return <main className="centered-page"><div className="loading-state">Loading your secure workspace…</div></main>
   if (!session) return null
 
-  const navigation = baseNavigation.filter((item) => canAccessNavigation(item, permissionScopes))
+  const navigation = baseNavigation.filter((item) => canAccessNavigation(item, permissionScopes) && (!item.dashboard || mayViewDashboard))
   const isCaseRoute = /^\/console\/cases\/[0-9a-f-]+$/i.test(pathname)
   const isTicketRoute = /^\/console\/tickets\/[0-9a-f-]+$/i.test(pathname)
   const isReportsRoute = pathname === '/console/reports/library' || /^\/console\/reports\/[a-z0-9-]+$/i.test(pathname)
@@ -115,12 +119,13 @@ export function ConsolePage({ pathname }) {
     ?? (isCaseRoute ? { permission: PERMISSIONS.CASES_READ } : null)
     ?? (isTicketRoute ? { permission: PERMISSIONS.TICKETS_READ } : null)
     ?? (isReportsRoute ? { permission: PERMISSIONS.REPORTS_READ } : null)
-  const authorized = !requestedItem || canAccessNavigation(requestedItem, permissionScopes)
+  const authorized = !requestedItem || (canAccessNavigation(requestedItem, permissionScopes) && (!requestedItem.dashboard || mayViewDashboard))
   const logout = async () => { await signOut(); navigate('/login', { replace: true }) }
 
   let content
   if (!authorized) content = <AccessDenied />
   else if (pathname === '/console') content = <Overview profile={profile} roles={roles}/>
+  else if (pathname === '/console/dashboard') content = <DashboardPage key={`${userId}-${JSON.stringify(permissionScopes)}`} profile={profile} mayReadTickets={canAccessNavigation({ permission: PERMISSIONS.TICKETS_READ }, permissionScopes)} mayReadReports={canAccessNavigation({ permission: PERMISSIONS.REPORTS_READ }, permissionScopes)}/>
   else if (pathname === '/console/leads') content = <CaseWorkspacePage area="leads" />
   else if (pathname === '/console/customers') content = <CaseWorkspacePage area="customers" />
   else if (pathname === '/console/follow-ups') content = <FollowUpsPage />
