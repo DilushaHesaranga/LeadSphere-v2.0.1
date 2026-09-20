@@ -25,7 +25,7 @@ import { PersonalDashboardPage } from './PersonalDashboardPage.jsx'
 
 const baseNavigation = [
   { path: '/console', label: 'Overview', icon: 'grid', exact: true },
-  { path: '/console/dashboard', label: 'CRM Dashboard', icon: 'chart', exact: true, permission: PERMISSIONS.DASHBOARDS_READ, dashboard: true },
+  { path: '/console/dashboard', label: 'My Dashboard', icon: 'chart', exact: true, permission: PERMISSIONS.DASHBOARDS_READ, dashboard: true },
   { path: '/console/cases', label: 'Cases', icon: 'file' },
   { path: '/console/leads', label: 'Leads', icon: 'lead', anyPermission: [PERMISSIONS.LEADS_READ, PERMISSIONS.TICKETS_READ] },
   { path: '/console/customers', label: 'Customers', icon: 'users', anyPermission: [PERMISSIONS.ACCOUNTS_READ, PERMISSIONS.CUSTOMER_CONTEXT_READ, PERMISSIONS.TICKETS_READ] },
