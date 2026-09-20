@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Icon } from '../components/Icons.jsx'
+import { SalesPerformance } from '../components/SalesPerformance.jsx'
 import {
   FollowUpHealthChart, OutcomeChart, PipelineFunnel, ReportFilterBar,
   ReportInsights, ReportMetricDefinitions, ReportMetricGrid, ReportSkeleton,
@@ -12,9 +13,10 @@ import {
 import { reportService } from '../services/reportService.js'
 import { navigate } from '../utils/router.js'
 
-function ReportsNavigation({ active }) {
+function ReportsNavigation({ active, mayReadSales }) {
   return <nav className="reports-tabs" aria-label="Reports sections">
     <button type="button" className={active === 'overview' ? 'active' : ''} aria-current={active === 'overview' ? 'page' : undefined} onClick={() => navigate('/console/reports')}>Overview</button>
+    {mayReadSales && <button type="button" className={active === 'sales' ? 'active' : ''} aria-current={active === 'sales' ? 'page' : undefined} onClick={() => navigate('/console/reports/sales')}>Sales performance</button>}
     <button type="button" className={active === 'library' ? 'active' : ''} aria-current={active === 'library' ? 'page' : undefined} onClick={() => navigate('/console/reports/library')}>Reports Library</button>
   </nav>
 }
@@ -46,7 +48,7 @@ function ReportsLibrary({ filters }) {
   </>
 }
 
-export function ReportsPage({ view = 'overview' }) {
+export function ReportsPage({ view = 'overview', mayReadSales = false, mayReadTickets = false }) {
   const today = useMemo(() => todayInReportTimezone(), [])
   const [filters, setFilters] = useState(() => parseReportFilters(window.location.search, today))
   const [options, setOptions] = useState({ timezone: 'Asia/Colombo', pipelines: [], stages: [], owners: [], today })
@@ -56,12 +58,13 @@ export function ReportsPage({ view = 'overview' }) {
   const sequence = useRef(0)
 
   useEffect(() => {
+    if (view === 'sales') return
     let active = true
     reportService.getFilterOptions().then((result) => {
       if (active) setOptions({ ...result, today })
     }).catch((loadError) => { if (active) setError(loadError.message) })
     return () => { active = false }
-  }, [today])
+  }, [today, view])
 
   const loadOverview = useCallback(async () => {
     if (view !== 'overview') return
@@ -91,8 +94,8 @@ export function ReportsPage({ view = 'overview' }) {
       <div><span className="section-kicker">Decision-ready CRM reporting</span><h1>Reports &amp; Insights</h1><p>Understand Ticket creation, conversion, pipeline health, outcomes, team contribution, activity, and Follow Up risk using only data in your authorised scope.</p></div>
       <button type="button" className="button button-secondary" onClick={() => navigate('/console/reports/library')}><Icon name="chart" size={17}/> Browse reports</button>
     </header>
-    <ReportsNavigation active={view}/>
-    {view === 'library' ? <ReportsLibrary filters={filters}/> : <>
+    <ReportsNavigation active={view} mayReadSales={mayReadSales}/>
+    {view === 'sales' ? mayReadSales && <SalesPerformance mayReadTickets={mayReadTickets}/> : view === 'library' ? <ReportsLibrary filters={filters}/> : <>
       <ReportFilterBar filters={filters} options={options} onChange={updateFilters} onClear={clearFilters}/>
       {error && <div className="alert alert-error report-alert"><span>{error}</span><button type="button" className="text-button" onClick={loadOverview}>Retry</button></div>}
       {loading ? <ReportSkeleton/> : overview && <>

@@ -17,7 +17,7 @@ begin
     join public.roles role on role.id = rp.role_id
     join public.permissions permission on permission.id = rp.permission_id
     where permission.slug = 'dashboards.read'
-      and role.slug not in ('marketing_manager','sales_manager','delivery_manager','leadership')
+      and role.slug not in ('marketing_manager','sales_manager','delivery_manager','leadership','marketing_executive','sales_executive')
   ) then
     raise exception 'Unexpected role retains a dashboard permission grant';
   end if;

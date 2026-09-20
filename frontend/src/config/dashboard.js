@@ -17,6 +17,16 @@ export function defaultDashboardFilters(today = todayInReportTimezone()) {
   return { preset: 'month', ...dashboardRange('month', today), pipelineId: '', ownerId: '', department: '' }
 }
 
+export function defaultSalesPerformanceFilters(today = todayInReportTimezone()) {
+  return { ...defaultDashboardFilters(today), preset: '30', ...dashboardRange('30', today) }
+}
+
+export function parseSalesPerformanceFilters(search = '', today = todayInReportTimezone()) {
+  const params = new URLSearchParams(search)
+  if (!DASHBOARD_PRESETS.some((item) => item.value === params.get('period'))) params.set('period', '30')
+  return parseDashboardFilters(params.toString(), today)
+}
+
 export function refreshDashboardFilters(filters, today = todayInReportTimezone()) {
   if (filters.preset === 'custom') return filters
   const range = dashboardRange(filters.preset, today)

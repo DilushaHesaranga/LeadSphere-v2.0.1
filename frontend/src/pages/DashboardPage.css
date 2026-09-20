@@ -1,4 +1,15 @@
 .crm-dashboard { max-width: 1560px; padding-top: 30px; }
+.personal-dashboard .crm-dashboard-metrics { grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); }
+.personal-revenue, .personal-call-list { margin-top: 24px; }
+.personal-revenue-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 18px; padding: 0 22px 22px; }
+.personal-revenue-grid article { padding: 18px; background: var(--surface-soft); border-radius: 12px; }
+.personal-revenue-grid strong { font-size: 24px; overflow-wrap: anywhere; }
+.personal-revenue-grid p, .personal-model { font-size: 12px; line-height: 1.7; color: var(--muted); }
+.personal-model { margin: 0 22px 22px; }
+.personal-dashboard progress { display: block; width: 100%; max-width: 280px; height: 12px; margin: 10px 0; accent-color: var(--accent); }
+.personal-call-list h2 { scroll-margin-top: 100px; }
+.personal-call-list select { max-width: 200px; display: block; margin-bottom: 10px; }
+@media(max-width:600px) { .personal-dashboard .crm-dashboard-panel-heading { flex-direction: column; align-items: stretch; } }
 .crm-dashboard-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
 .crm-dashboard-heading h1 { margin: 8px 0; font-size: clamp(28px, 3vw, 38px); font-weight: 650; letter-spacing: -1.4px; }
 .crm-dashboard-heading p { color: var(--muted); margin: 0; font-size: 14px; line-height: 1.6; }
