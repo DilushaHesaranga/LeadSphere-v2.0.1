@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 
 import { useAuth } from "@/auth/AuthContext";
+import { SyncPanel } from "@/offline/SyncPanel";
 import { Button } from "@/components/Button";
 import { Notice } from "@/components/Notice";
 import { Screen } from "@/components/Screen";
@@ -18,7 +19,7 @@ export function ProfileScreen() {
   const logout = () => {
     Alert.alert(
       "Sign out of LeadSphere?",
-      "Your secure session will be removed from this device.",
+      "Your secure session will be removed. Unsynchronized work stays encrypted on this device and will synchronize only after you sign in online again with this account.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -73,6 +74,7 @@ export function ProfileScreen() {
           loading={loading}
           onPress={logout}
         />
+        <SyncPanel />
       </View>
     </Screen>
   );

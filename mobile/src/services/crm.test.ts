@@ -1,6 +1,17 @@
 jest.mock("./supabase", () => ({
   supabase: { rpc: jest.fn() },
 }));
+jest.mock("@/config/env", () => ({
+  env: {
+    apiUrl: "https://example.test",
+    supabaseUrl: "https://example.test",
+    supabasePublishableKey: "test",
+  },
+}));
+jest.mock("@/offline/transport", () => ({
+  configureTransport: jest.fn(),
+  hasOfflineIdentity: () => false,
+}));
 
 import { crmService } from "./crm";
 import { supabase } from "./supabase";

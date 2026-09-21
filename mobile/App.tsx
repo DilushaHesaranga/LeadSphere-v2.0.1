@@ -8,6 +8,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { enableScreens } from "react-native-screens";
 
 import { AuthProvider } from "@/auth/AuthContext";
+import { SyncManager } from "@/offline/SyncManager";
+import { OfflineBanner } from "@/offline/OfflineBanner";
 import { RootNavigator } from "@/navigation/RootNavigator";
 import { PushNotificationManager } from "@/notifications/PushNotificationManager";
 import type { MainTabParamList } from "@/types/navigation";
@@ -39,9 +41,11 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
+        <SyncManager />
         <PushNotificationManager onOpenTicket={handleNotificationTicket} />
         <NavigationContainer ref={navigationRef} onReady={openPendingTicket}>
           <StatusBar style="dark" />
+          <OfflineBanner />
           <RootNavigator />
         </NavigationContainer>
       </AuthProvider>

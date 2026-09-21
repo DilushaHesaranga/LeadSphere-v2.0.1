@@ -32,7 +32,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   slug: "leadsphere-mobile",
   owner: "dilushahesarangas-team",
   scheme: "leadsphere",
-  version: "2.0.1",
+  version: "2.1.0",
   orientation: "portrait",
   userInterfaceStyle: "light",
   platforms: ["android", "ios"],
@@ -41,16 +41,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: isProduction
       ? "com.eldream.leadsphere"
       : `com.eldream.leadsphere.${appEnvironment}`,
-    buildNumber: "1",
+    buildNumber: "2",
   },
   android: {
     package: isProduction
       ? "com.eldream.leadsphere"
       : `com.eldream.leadsphere.${appEnvironment}`,
-    versionCode: 1,
+    versionCode: 2,
     googleServicesFile: resolveGoogleServicesFile(),
   },
   plugins: [
+    ["expo-sqlite", { useSQLCipher: true }],
     [
       "expo-notifications",
       {

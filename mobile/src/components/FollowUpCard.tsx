@@ -41,7 +41,7 @@ export function FollowUpCard({
   onStopSeries,
 }: FollowUpCardProps) {
   const overdue = item.status === "PENDING" && isOverdue(item.scheduledAt);
-  const pending = item.status === "PENDING";
+  const pending = item.status === "PENDING" && !item.syncStatus;
   const hasActions =
     pending && (onEdit || onComplete || onCancel || onStopSeries);
 
@@ -87,6 +87,16 @@ export function FollowUpCard({
       </View>
 
       <View style={styles.body}>
+        {item.syncStatus ? (
+          <Text>
+            {item.syncStatus === "pending"
+              ? "Pending sync"
+              : item.syncStatus === "syncing"
+                ? "Syncing"
+                : "Sync failed — review in Profile"}
+          </Text>
+        ) : null}
+        {item.syncError ? <Text>{item.syncError}</Text> : null}
         <Text style={styles.instruction}>
           {pending
             ? "Scheduled customer action"
@@ -94,7 +104,9 @@ export function FollowUpCard({
               ? "Customer action completed"
               : "Customer action cancelled"}
         </Text>
-        {item.purpose ? <Text style={styles.purpose}>{item.purpose}</Text> : null}
+        {item.purpose ? (
+          <Text style={styles.purpose}>{item.purpose}</Text>
+        ) : null}
         <MetaRow
           label={pending ? "Due date" : "Scheduled date"}
           value={formatDateTime(item.scheduledAt)}

@@ -9,6 +9,8 @@ supabase/.temp/
 **/dist/
 **/coverage/
 **/.expo/
+playwright-report/
+test-results/
 
 .env
 .env.*

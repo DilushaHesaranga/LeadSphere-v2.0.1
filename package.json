@@ -10,12 +10,18 @@
     "build:all": "npm run build --prefix frontend && npm run build --prefix backend",
     "test": "npm run test --prefix frontend && npm run test --prefix backend -- --runInBand",
     "test:all": "npm run test && npm run test --prefix mobile",
+    "pretest:e2e": "playwright install chromium",
+    "test:e2e": "playwright test",
+    "test:e2e:report": "playwright show-report playwright-report",
+    "test:mobile-offline-db": "node --test supabase/tests/mobile-offline-sync.test.mjs",
     "mobile:check": "npm run typecheck --prefix mobile && npm run lint --prefix mobile && npm run test --prefix mobile && npm run validate:config --prefix mobile",
     "firebase:login": "firebase login",
     "firebase:serve": "npm run build && firebase emulators:start --only hosting",
     "firebase:deploy": "npm run build && firebase deploy --only hosting"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.3.16",
+    "@playwright/test": "^1.63.0",
     "firebase-tools": "^15.25.0"
   }
 }

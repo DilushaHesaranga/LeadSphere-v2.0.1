@@ -13,14 +13,24 @@ export async function apiRequest<T>(
   path: string,
   { accessToken, headers, ...options }: ApiOptions,
 ): Promise<T> {
-  const response = await fetch(`${env.apiUrl}/api${path}`, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-      ...headers,
-    },
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
+  let response: Response;
+  try {
+    response = await fetch(`${env.apiUrl}/api${path}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        ...headers,
+      },
+    });
+  } catch {
+    throw new Error("Network connection unavailable or request timeout.");
+  } finally {
+    clearTimeout(timeout);
+  }
   const payload = (await response.json().catch(() => ({}))) as ErrorPayload;
   if (!response.ok) {
     const message = Array.isArray(payload.message)

@@ -18,6 +18,14 @@ import { apiRequest } from "@/services/api";
 import { parseAuthLink } from "@/services/authLinks";
 import { unregisterCurrentPushDevice } from "@/services/pushNotifications";
 import { clearUserCache } from "@/services/secureCache";
+import {
+  configureOffline,
+  readAuthorization,
+  saveAuthorization,
+  classifyFailure,
+  canUseCachedSession,
+} from "@/offline/runtime";
+import { offlineDatabase } from "@/offline/database";
 import { supabase } from "@/services/supabase";
 import type { DataAccessScope, UserAuthorization } from "@/types/authorization";
 import { EMPTY_AUTHORIZATION } from "@/types/authorization";
@@ -58,8 +66,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [message, setMessage] = useState("");
   const mounted = useRef(true);
   const recoveryMode = useRef(false);
+  const accessGeneration = useRef(0);
 
   const loadAuthorization = useCallback(async (nextSession: Session) => {
+    const generation = ++accessGeneration.current;
     if (mounted.current) {
       setStatus("loadingAccess");
       setMessage("");
@@ -68,7 +78,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       const access = await apiRequest<UserAuthorization>("/authorization/me", {
         accessToken: nextSession.access_token,
       });
-      if (!mounted.current) return;
+      if (!mounted.current || generation !== accessGeneration.current) return;
+      await saveAuthorization(nextSession.user.id, access);
+      if (!mounted.current || generation !== accessGeneration.current) return;
+      configureOffline(nextSession, access, true);
       setAuthorization(access);
       const decision = decideMobileAccess(access);
       if (recoveryMode.current) {
@@ -84,7 +97,28 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setStatus("accessError");
       }
     } catch (error) {
-      if (!mounted.current) return;
+      if (!mounted.current || generation !== accessGeneration.current) return;
+      const cached =
+        classifyFailure(error).kind === "retry" &&
+        nextSession.expires_at &&
+        nextSession.expires_at * 1000 > Date.now()
+          ? await readAuthorization(nextSession.user.id)
+          : null;
+      if (generation !== accessGeneration.current) return;
+      if (
+        cached &&
+        canUseCachedSession(nextSession, cached) &&
+        decideMobileAccess(cached) === "allowed"
+      ) {
+        configureOffline(nextSession, cached, false);
+        setAuthorization(cached);
+        setMessage(
+          "Offline access uses your last verified permissions. Changes wait for online verification.",
+        );
+        setStatus("ready");
+        return;
+      }
+      configureOffline(null, null, false);
       setAuthorization(EMPTY_AUTHORIZATION);
       setMessage(friendlyRequestError(error));
       setStatus("accessError");
@@ -147,6 +181,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
           return;
         }
         if (!nextSession) {
+          accessGeneration.current++;
+          configureOffline(null, null, false);
           recoveryMode.current = false;
           setAuthorization(EMPTY_AUTHORIZATION);
           setStatus("signedOut");
@@ -191,15 +227,35 @@ export function AuthProvider({ children }: PropsWithChildren) {
     [loadAuthorization],
   );
 
+  useEffect(() => {
+    if (!session?.expires_at) return;
+    const expire = () => {
+      configureOffline(null, null, false);
+      setAuthorization(EMPTY_AUTHORIZATION);
+      setMessage(
+        "Your saved session has expired. Connect to the internet to verify access again. Your pending work is retained.",
+      );
+      setStatus("accessError");
+    };
+    const delay = session.expires_at * 1000 - Date.now();
+    const timer = setTimeout(expire, Math.max(0, delay));
+    return () => clearTimeout(timer);
+  }, [session]);
+
   const signOut = useCallback(async () => {
+    accessGeneration.current++;
     const userId = session?.user.id;
+    configureOffline(null, null, false);
     await unregisterCurrentPushDevice().catch(() => undefined);
     const { error } = await supabase.auth.signOut();
     if (error) {
-      const { error: localError } = await supabase.auth.signOut({ scope: "local" });
+      const { error: localError } = await supabase.auth.signOut({
+        scope: "local",
+      });
       if (localError) throw new Error("Sign out could not be completed.");
     }
     await clearUserCache(userId);
+    if (userId) await offlineDatabase.clearCache(userId);
     recoveryMode.current = false;
     setSession(null);
     setAuthorization(EMPTY_AUTHORIZATION);

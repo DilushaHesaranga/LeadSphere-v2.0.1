@@ -1,4 +1,25 @@
-# Dashboard browser checks
+# Browser checks
+
+The existing browser-testing folder is reused for both the original Dashboard QA
+script and the lecturer-friendly Sprint 2 Playwright suite.
+
+Run the 12 Sprint 2 tests from the repository root:
+
+```text
+npm run test:e2e
+npm run test:e2e:report
+```
+
+`npm run test:e2e` first verifies that the matching Playwright Chromium runtime
+is installed for the operating-system user running the command. This prevents a
+browser installed by another Windows account or automation sandbox from causing
+all tests to fail before they start.
+
+The Sprint 2 suite uses `playwright.config.js`, Chromium, synthetic authentication,
+realistic seeded fixtures, and intercepted Supabase/AI responses. It does not use
+production data, send email, or consume AI credits.
+
+## Original Dashboard browser checks
 
 Run from the repository root:
 

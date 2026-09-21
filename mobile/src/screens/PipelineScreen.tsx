@@ -9,6 +9,7 @@ import {
 } from "react-native";
 
 import { useAuth } from "@/auth/AuthContext";
+import { useSyncRefresh } from "@/offline/useSyncRefresh";
 import { EmptyState } from "@/components/EmptyState";
 import { Notice } from "@/components/Notice";
 import { Screen } from "@/components/Screen";
@@ -70,6 +71,7 @@ export function PipelineScreen() {
     void loadInitial();
   }, [load]);
 
+  useSyncRefresh(load);
   const confirmMove = (card: PipelineCard, stage: PipelineStage) => {
     Alert.alert(
       `Move to ${stage.name}?`,
@@ -93,7 +95,9 @@ export function PipelineScreen() {
               )
               .then(async () => {
                 setChoosingId("");
-                setMessage(`${card.projectTitle} moved to ${stage.name}.`);
+                setMessage(
+                  `Stage change saved for ${card.projectTitle}. Check Profile for synchronization status.`,
+                );
                 await load(true);
               })
               .catch((nextError) => setError(friendlyRequestError(nextError)))
@@ -111,7 +115,8 @@ export function PipelineScreen() {
           <Text style={styles.eyebrow}>SALES JOURNEY</Text>
           <Text style={styles.title}>Pipeline</Text>
           <Text style={styles.description}>
-            Review every stage and move assigned Tickets with server-side validation.
+            Review every stage and move assigned Tickets with server-side
+            validation.
           </Text>
         </View>
         <TextField
@@ -121,63 +126,122 @@ export function PipelineScreen() {
           placeholder="Ticket, project, or company"
           returnKeyType="search"
         />
-        {cachedAt ? <Notice message={`Offline pipeline from ${formatDateTime(cachedAt)}. Stage changes require a connection.`} /> : null}
+        {cachedAt ? (
+          <Notice
+            message={`Cached pipeline from ${formatDateTime(cachedAt)}. Stage changes will be checked against the current server version when synchronized.`}
+          />
+        ) : null}
         {error ? <Notice tone="error" message={error} /> : null}
         {message ? <Notice tone="success" message={message} /> : null}
-        {loading ? <ActivityIndicator size="large" color={colors.primary} /> : null}
+        {loading ? (
+          <ActivityIndicator size="large" color={colors.primary} />
+        ) : null}
         {!loading && board ? (
           <>
             <View style={styles.summary}>
               <Text style={styles.summaryTitle}>{board.pipeline.name}</Text>
-              <Text style={styles.summaryCount}>{board.totalCount} Tickets</Text>
+              <Text style={styles.summaryCount}>
+                {board.totalCount} Tickets
+              </Text>
             </View>
             {board.stages.map((stage) => (
               <View key={stage.slug} style={styles.stage}>
                 <View style={styles.stageHeader}>
                   <View>
                     <Text style={styles.stageTitle}>{stage.name}</Text>
-                    <Text style={styles.stageCategory}>{stage.category} · {stage.probability}% probability</Text>
+                    <Text style={styles.stageCategory}>
+                      {stage.category} · {stage.probability}% probability
+                    </Text>
                   </View>
                   <Text style={styles.stageCount}>{stage.totalCount}</Text>
                 </View>
                 {stage.cards.map((card) => (
                   <View key={card.id} style={styles.card}>
                     <Text style={styles.cardTitle}>{card.projectTitle}</Text>
-                    <Text style={styles.cardCompany}>{card.companyName} · #{card.ticketNumber}</Text>
-                    <Text style={styles.cardMeta}>Manager: {card.responsibleManagerName}</Text>
-                    <Text style={[styles.cardMeta, card.hasOverdueFollowUp && styles.overdue]}>
-                      Follow-up: {card.hasOverdueFollowUp ? "Overdue" : card.nextFollowUpAt ? formatDateTime(card.nextFollowUpAt) : "None scheduled"}
+                    {card.syncStatus ? (
+                      <Text>
+                        {card.syncStatus === "pending"
+                          ? "Pending sync"
+                          : card.syncStatus === "syncing"
+                            ? "Syncing"
+                            : "Sync failed — review in Profile"}
+                      </Text>
+                    ) : null}
+                    <Text style={styles.cardCompany}>
+                      {card.companyName} · #{card.ticketNumber}
                     </Text>
-                    {card.canMove && card.status === "active" && !cachedAt ? (
+                    <Text style={styles.cardMeta}>
+                      Manager: {card.responsibleManagerName}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.cardMeta,
+                        card.hasOverdueFollowUp && styles.overdue,
+                      ]}
+                    >
+                      Follow-up:{" "}
+                      {card.hasOverdueFollowUp
+                        ? "Overdue"
+                        : card.nextFollowUpAt
+                          ? formatDateTime(card.nextFollowUpAt)
+                          : "None scheduled"}
+                    </Text>
+                    {card.canMove && card.status === "active" ? (
                       <>
                         <Pressable
                           accessibilityRole="button"
                           disabled={movingId === card.id}
-                          onPress={() => setChoosingId((current) => current === card.id ? "" : card.id)}
+                          onPress={() =>
+                            setChoosingId((current) =>
+                              current === card.id ? "" : card.id,
+                            )
+                          }
                           style={styles.moveButton}
                         >
-                          <Text style={styles.moveButtonText}>{movingId === card.id ? "Moving…" : choosingId === card.id ? "Close stages" : "Move stage"}</Text>
+                          <Text style={styles.moveButtonText}>
+                            {movingId === card.id
+                              ? "Moving…"
+                              : choosingId === card.id
+                                ? "Close stages"
+                                : "Move stage"}
+                          </Text>
                         </Pressable>
                         {choosingId === card.id ? (
                           <View style={styles.stageChoices}>
-                            {board.stages.filter((choice) => choice.slug !== card.stage).map((choice) => (
-                              <Pressable key={choice.slug} accessibilityRole="button" onPress={() => confirmMove(card, choice)} style={styles.stageChoice}>
-                                <Text style={styles.stageChoiceText}>{choice.name}</Text>
-                              </Pressable>
-                            ))}
+                            {board.stages
+                              .filter((choice) => choice.slug !== card.stage)
+                              .map((choice) => (
+                                <Pressable
+                                  key={choice.slug}
+                                  accessibilityRole="button"
+                                  onPress={() => confirmMove(card, choice)}
+                                  style={styles.stageChoice}
+                                >
+                                  <Text style={styles.stageChoiceText}>
+                                    {choice.name}
+                                  </Text>
+                                </Pressable>
+                              ))}
                           </View>
                         ) : null}
                       </>
                     ) : null}
                   </View>
                 ))}
-                {!stage.cards.length ? <Text style={styles.stageEmpty}>No matching Tickets in this stage.</Text> : null}
+                {!stage.cards.length ? (
+                  <Text style={styles.stageEmpty}>
+                    No matching Tickets in this stage.
+                  </Text>
+                ) : null}
               </View>
             ))}
           </>
         ) : null}
         {!loading && board && !board.totalCount ? (
-          <EmptyState title="No pipeline matches" message="Clear or change the search to see more Tickets." />
+          <EmptyState
+            title="No pipeline matches"
+            message="Clear or change the search to see more Tickets."
+          />
         ) : null}
       </View>
     </Screen>
@@ -187,26 +251,78 @@ export function PipelineScreen() {
 const styles = StyleSheet.create({
   page: { gap: spacing.lg },
   heading: { gap: spacing.sm },
-  eyebrow: { color: colors.accent, fontSize: 12, fontWeight: "800", letterSpacing: 1.4 },
+  eyebrow: {
+    color: colors.accent,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 1.4,
+  },
   title: { color: colors.ink, fontSize: 30, fontWeight: "800" },
   description: { color: colors.inkMuted, fontSize: 15, lineHeight: 22 },
-  summary: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  summary: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   summaryTitle: { color: colors.ink, fontSize: 20, fontWeight: "800" },
   summaryCount: { color: colors.inkMuted, fontWeight: "700" },
   stage: { gap: spacing.sm },
-  stageHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: spacing.sm },
+  stageHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: spacing.sm,
+  },
   stageTitle: { color: colors.ink, fontSize: 18, fontWeight: "800" },
-  stageCategory: { color: colors.inkMuted, fontSize: 12, textTransform: "capitalize" },
-  stageCount: { minWidth: 36, textAlign: "center", color: colors.primary, fontWeight: "900", backgroundColor: colors.surfaceMuted, padding: spacing.sm, borderRadius: radius.pill },
-  card: { padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, gap: spacing.sm },
+  stageCategory: {
+    color: colors.inkMuted,
+    fontSize: 12,
+    textTransform: "capitalize",
+  },
+  stageCount: {
+    minWidth: 36,
+    textAlign: "center",
+    color: colors.primary,
+    fontWeight: "900",
+    backgroundColor: colors.surfaceMuted,
+    padding: spacing.sm,
+    borderRadius: radius.pill,
+  },
+  card: {
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    gap: spacing.sm,
+  },
   cardTitle: { color: colors.ink, fontSize: 16, fontWeight: "800" },
   cardCompany: { color: colors.primary, fontWeight: "700" },
   cardMeta: { color: colors.inkMuted, fontSize: 12 },
   overdue: { color: colors.danger, fontWeight: "800" },
-  moveButton: { minHeight: 42, alignItems: "center", justifyContent: "center", borderRadius: radius.sm, backgroundColor: colors.primary },
+  moveButton: {
+    minHeight: 42,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radius.sm,
+    backgroundColor: colors.primary,
+  },
   moveButtonText: { color: colors.white, fontWeight: "800" },
   stageChoices: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  stageChoice: { minHeight: 40, paddingHorizontal: spacing.md, alignItems: "center", justifyContent: "center", borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceMuted },
+  stageChoice: {
+    minHeight: 40,
+    paddingHorizontal: spacing.md,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceMuted,
+  },
   stageChoiceText: { color: colors.primary, fontSize: 12, fontWeight: "700" },
-  stageEmpty: { color: colors.inkMuted, fontStyle: "italic", padding: spacing.md },
+  stageEmpty: {
+    color: colors.inkMuted,
+    fontStyle: "italic",
+    padding: spacing.md,
+  },
 });

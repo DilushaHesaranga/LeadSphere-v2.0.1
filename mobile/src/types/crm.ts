@@ -2,10 +2,7 @@ export type BusinessArea = "leads" | "customers";
 export type FollowUpStatus = "PENDING" | "COMPLETED" | "CANCELLED";
 export type FollowUpType = "CALL" | "EMAIL" | "MEETING";
 export type RecurrenceFrequency =
-  | "DAILY"
-  | "EVERY_3_DAYS"
-  | "WEEKLY"
-  | "MONTHLY";
+  "DAILY" | "EVERY_3_DAYS" | "WEEKLY" | "MONTHLY";
 
 export interface AssignedUser {
   id: string;
@@ -76,6 +73,8 @@ export interface CaseSummary {
 }
 
 export interface FollowUp {
+  syncStatus?: import("@/offline/types").SyncStatus;
+  syncError?: string | null;
   id: string;
   ticketId: string;
   ticketTitle: string;
@@ -118,6 +117,7 @@ export interface PipelineStage {
 }
 
 export interface PipelineCard {
+  syncStatus?: import("@/offline/types").SyncStatus;
   id: string;
   ticketNumber: string;
   caseId: string;

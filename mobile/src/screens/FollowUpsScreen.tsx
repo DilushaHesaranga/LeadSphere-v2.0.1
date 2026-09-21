@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import { useAuth } from "@/auth/AuthContext";
+import { useSyncRefresh } from "@/offline/useSyncRefresh";
 import { PERMISSIONS } from "@/authorization/permissions";
 import { EmptyState } from "@/components/EmptyState";
 import { FollowUpCard } from "@/components/FollowUpCard";
@@ -46,8 +47,8 @@ export function FollowUpsScreen({ navigation }: Props) {
   const [cachedAt, setCachedAt] = useState<string | null>(null);
   const [busyId, setBusyId] = useState("");
   const [editor, setEditor] = useState<EditorState>(null);
-  const mayCreate = hasFollowUpCreatorRole(authorization.roles) && !cachedAt;
-  const mayManage = can(PERMISSIONS.TICKET_NOTES_CREATE) && !cachedAt;
+  const mayCreate = hasFollowUpCreatorRole(authorization.roles);
+  const mayManage = can(PERMISSIONS.TICKET_NOTES_CREATE);
 
   const load = useCallback(
     async (refresh = false) => {
@@ -81,6 +82,7 @@ export function FollowUpsScreen({ navigation }: Props) {
     void loadInitial();
   }, [load]);
 
+  useSyncRefresh(load);
   const complete = async (item: FollowUp) => {
     if (busyId) return;
     setBusyId(item.id);
@@ -91,7 +93,7 @@ export function FollowUpsScreen({ navigation }: Props) {
       setMessage(
         result.nextFollowUpId
           ? "Follow Up completed. The next recurring occurrence was scheduled."
-          : "Follow Up completed.",
+          : "Completion saved. Check Profile for synchronization status.",
       );
       await load(true);
     } catch (nextError) {
@@ -108,7 +110,9 @@ export function FollowUpsScreen({ navigation }: Props) {
     setMessage("");
     try {
       await crmService.cancelFollowUp(item.id);
-      setMessage("Follow Up cancelled. Its history was preserved.");
+      setMessage(
+        "Cancellation saved. Check Profile for synchronization status.",
+      );
       await load(true);
     } catch (nextError) {
       setError(friendlyRequestError(nextError));
@@ -124,7 +128,9 @@ export function FollowUpsScreen({ navigation }: Props) {
     setMessage("");
     try {
       await crmService.stopFollowUpSeries(item.seriesId);
-      setMessage("Recurring series stopped. Existing history was preserved.");
+      setMessage(
+        "Stop request saved. Check Profile for synchronization status.",
+      );
       await load(true);
     } catch (nextError) {
       setError(friendlyRequestError(nextError));
@@ -206,7 +212,7 @@ export function FollowUpsScreen({ navigation }: Props) {
           />
           {cachedAt ? (
             <Notice
-              message={`Offline view from ${formatDateTime(cachedAt)}. Follow Up changes require a connection.`}
+              message={`Cached view from ${formatDateTime(cachedAt)}. Permitted changes are saved for synchronization.`}
             />
           ) : null}
           {error ? <Notice tone="error" message={error} /> : null}
@@ -298,7 +304,9 @@ export function FollowUpsScreen({ navigation }: Props) {
           onClose={() => setEditor(null)}
           onSaved={async (editing) => {
             setEditor(null);
-            setMessage(editing ? "Follow Up updated." : "Follow Up created.");
+            setMessage(
+              "Follow Up saved. Check Profile for synchronization status.",
+            );
             await load(true);
           }}
           visible

@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import { useAuth } from "@/auth/AuthContext";
+import { useSyncRefresh } from "@/offline/useSyncRefresh";
 import { PERMISSIONS } from "@/authorization/permissions";
 import { Button } from "@/components/Button";
 import { EmptyState } from "@/components/EmptyState";
@@ -57,8 +58,7 @@ export function TicketDetailScreen({ route }: Props) {
   const [cachedAt, setCachedAt] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [noteBusy, setNoteBusy] = useState(false);
-  const [followUpStatus, setFollowUpStatus] =
-    useState<FollowUpView>("ALL");
+  const [followUpStatus, setFollowUpStatus] = useState<FollowUpView>("ALL");
   const [followUpBusyId, setFollowUpBusyId] = useState("");
   const [editor, setEditor] = useState<EditorState>(null);
   const hasWritePermission = can(PERMISSIONS.TICKET_NOTES_CREATE);
@@ -101,6 +101,7 @@ export function TicketDetailScreen({ route }: Props) {
     void loadInitial();
   }, [load]);
 
+  useSyncRefresh(load);
   const editorTicket = useMemo<FollowUpTicketOption | null>(() => {
     const ticket = workspace?.ticket;
     if (!ticket) return null;
@@ -123,7 +124,7 @@ export function TicketDetailScreen({ route }: Props) {
     try {
       await crmService.addTicketNote(ticketId, content);
       setNote("");
-      setMessage("Note added and synchronized.");
+      setMessage("Note saved. Check Profile for synchronization status.");
       await load(true);
     } catch (nextError) {
       setError(friendlyRequestError(nextError));
@@ -142,7 +143,7 @@ export function TicketDetailScreen({ route }: Props) {
       setMessage(
         result.nextFollowUpId
           ? "Follow Up completed. The next recurring occurrence was scheduled."
-          : "Follow Up completed.",
+          : "Completion saved. Check Profile for synchronization status.",
       );
       await load(true);
     } catch (nextError) {
@@ -159,7 +160,9 @@ export function TicketDetailScreen({ route }: Props) {
     setMessage("");
     try {
       await crmService.cancelFollowUp(item.id);
-      setMessage("Follow Up cancelled. Its history was preserved.");
+      setMessage(
+        "Cancellation saved. Check Profile for synchronization status.",
+      );
       await load(true);
     } catch (nextError) {
       setError(friendlyRequestError(nextError));
@@ -175,7 +178,9 @@ export function TicketDetailScreen({ route }: Props) {
     setMessage("");
     try {
       await crmService.stopFollowUpSeries(item.seriesId);
-      setMessage("Recurring series stopped. Existing history was preserved.");
+      setMessage(
+        "Stop request saved. Check Profile for synchronization status.",
+      );
       await load(true);
     } catch (nextError) {
       setError(friendlyRequestError(nextError));
@@ -239,14 +244,12 @@ export function TicketDetailScreen({ route }: Props) {
     ticket.assignedUsers.some(
       (assignedUser) => assignedUser.id === authorization.profile?.id,
     );
-  const mayCreateFollowUp =
-    !cachedAt &&
-    canCreateTicketFollowUp(
-      authorization.roles,
-      ticket,
-      authorization.profile?.id,
-    );
-  const mayManageFollowUps = hasWritePermission && !cachedAt;
+  const mayCreateFollowUp = canCreateTicketFollowUp(
+    authorization.roles,
+    ticket,
+    authorization.profile?.id,
+  );
+  const mayManageFollowUps = hasWritePermission;
   const visibleFollowUps = workspace.followUps.filter(
     (item) => followUpStatus === "ALL" || item.status === followUpStatus,
   );
@@ -270,7 +273,7 @@ export function TicketDetailScreen({ route }: Props) {
           </View>
           {cachedAt ? (
             <Notice
-              message={`Offline view from ${formatDateTime(cachedAt)}. Changes are disabled until connected.`}
+              message={`Cached view from ${formatDateTime(cachedAt)}. Permitted changes are saved for synchronization.`}
             />
           ) : null}
           {error ? <Notice tone="error" message={error} /> : null}
@@ -380,7 +383,7 @@ export function TicketDetailScreen({ route }: Props) {
           </Section>
 
           <Section title="Shared notes">
-            {mayAddNote && ticket.status === "active" && !cachedAt ? (
+            {mayAddNote && ticket.status === "active" ? (
               <View style={styles.noteForm}>
                 <TextField
                   label="New note"
@@ -422,7 +425,9 @@ export function TicketDetailScreen({ route }: Props) {
           onClose={() => setEditor(null)}
           onSaved={async (editing) => {
             setEditor(null);
-            setMessage(editing ? "Follow Up updated." : "Follow Up created.");
+            setMessage(
+              "Follow Up saved. Check Profile for synchronization status.",
+            );
             await load(true);
           }}
           visible

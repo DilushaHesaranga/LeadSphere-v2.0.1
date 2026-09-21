@@ -1,4 +1,14 @@
 import { supabase } from "./supabase";
+import { env } from "@/config/env";
+import {
+  configureTransport,
+  enqueueMutation,
+  hasOfflineIdentity,
+  MUTATIONS,
+  readOfflineRpc,
+  SyncError,
+} from "@/offline/transport";
+import type { Operation } from "@/offline/types";
 import type {
   BusinessArea,
   CaseSummary,
@@ -12,7 +22,10 @@ import type {
   UpdateFollowUpInput,
 } from "@/types/crm";
 
-function safeMessage(error: { message?: string } | null, fallback: string): string {
+function safeMessage(
+  error: { message?: string } | null,
+  fallback: string,
+): string {
   const message = error?.message ?? fallback;
   const known = message.match(/[A-Z_]+:\s*(.+)$/);
   if (known?.[1]) return known[1];
@@ -30,10 +43,75 @@ async function rpc<T>(
   parameters: Record<string, unknown> = {},
   fallback = "The request could not be completed.",
 ): Promise<T> {
-  const { data, error } = await supabase.rpc(name, parameters);
-  if (error) throw new Error(safeMessage(error, fallback));
-  return data as T;
+  if (hasOfflineIdentity()) {
+    if (MUTATIONS.has(name))
+      return (await enqueueMutation(name as Operation, parameters)) as T;
+    return readOfflineRpc(name, parameters, () =>
+      networkRpc<T>(name, parameters, fallback),
+    );
+  }
+  return networkRpc(name, parameters, fallback);
 }
+
+async function networkRpc<T>(
+  name: string,
+  parameters: Record<string, unknown>,
+  fallback: string,
+): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const request = supabase.rpc(name, parameters);
+    const { data, error } = await (hasOfflineIdentity()
+      ? request.abortSignal(controller.signal)
+      : request);
+    if (error) throw new Error(safeMessage(error, fallback));
+    return data as T;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+configureTransport(async (name, params, token) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const series = name === "__series_versions";
+    const url = series
+      ? `${env.supabaseUrl}/rest/v1/crm_follow_up_series?select=id,ticket_id,updated_at&id=in.(${(params.ids as string[]).map(encodeURIComponent).join(",")})`
+      : `${env.supabaseUrl}/rest/v1/rpc/${name}`;
+    const response = await fetch(url, {
+      method: series ? "GET" : "POST",
+      signal: controller.signal,
+      headers: {
+        apikey: env.supabasePublishableKey,
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      ...(series ? {} : { body: JSON.stringify(params) }),
+    });
+    const result = (await response.json()) as { message?: string };
+    if (!response.ok) {
+      if (response.status === 401)
+        throw new SyncError("Sign in online again to synchronize.", "auth");
+      if (response.status === 429 || response.status >= 500)
+        throw new SyncError(
+          "Service temporarily unavailable. Your change is saved.",
+          "retry",
+        );
+      throw new SyncError(
+        result.message || "The server rejected this change.",
+        /conflict/i.test(result.message || "") ? "conflict" : "rejected",
+      );
+    }
+    return result;
+  } catch (error) {
+    if (error instanceof SyncError) throw error;
+    throw new SyncError("Network timeout. Your change is saved.", "retry");
+  } finally {
+    clearTimeout(timeout);
+  }
+});
 
 export const crmService = Object.freeze({
   async dashboard(): Promise<DashboardData> {
@@ -72,7 +150,11 @@ export const crmService = Object.freeze({
   },
 
   getTicket(ticketId: string): Promise<TicketDetail> {
-    return rpc("get_crm_ticket", { p_ticket_id: ticketId }, "Ticket could not be loaded.");
+    return rpc(
+      "get_crm_ticket",
+      { p_ticket_id: ticketId },
+      "Ticket could not be loaded.",
+    );
   },
 
   addTicketNote(ticketId: string, content: string): Promise<{ id: string }> {
@@ -82,7 +164,10 @@ export const crmService = Object.freeze({
     });
   },
 
-  listFollowUps(status: string | null = null, ticketId: string | null = null): Promise<FollowUp[]> {
+  listFollowUps(
+    status: string | null = null,
+    ticketId: string | null = null,
+  ): Promise<FollowUp[]> {
     return rpc("list_crm_follow_ups", {
       p_ticket_id: ticketId,
       p_status: status,
@@ -91,14 +176,19 @@ export const crmService = Object.freeze({
     });
   },
 
-  searchFollowUpTickets(search = "", limit = 30): Promise<FollowUpTicketOption[]> {
+  searchFollowUpTickets(
+    search = "",
+    limit = 30,
+  ): Promise<FollowUpTicketOption[]> {
     return rpc("search_crm_follow_up_tickets", {
       p_search: search.trim(),
       p_limit: limit,
     });
   },
 
-  createFollowUp(input: CreateFollowUpInput): Promise<{ id: string; duplicate: boolean }> {
+  createFollowUp(
+    input: CreateFollowUpInput,
+  ): Promise<{ id: string; duplicate: boolean }> {
     return rpc("create_crm_follow_up", {
       p_ticket_id: input.ticketId,
       p_scheduled_at: input.scheduledAt,
@@ -110,7 +200,10 @@ export const crmService = Object.freeze({
     });
   },
 
-  updateFollowUp(followUpId: string, input: UpdateFollowUpInput): Promise<{ id: string }> {
+  updateFollowUp(
+    followUpId: string,
+    input: UpdateFollowUpInput,
+  ): Promise<{ id: string }> {
     return rpc("update_crm_follow_up", {
       p_follow_up_id: followUpId,
       p_scheduled_at: input.scheduledAt,
