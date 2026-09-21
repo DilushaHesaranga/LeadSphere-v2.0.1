@@ -11,7 +11,9 @@ Reports & Insights is LeadSphere's permission-aware reporting workspace. It aggr
 - No chart or export dependency was added. Charts use semantic HTML/CSS, and CSV generation escapes spreadsheet formulas.
 - LeadSphere is currently a single-company deployment. There is no organization or tenant key in the CRM schema. Isolation is therefore based on authentication, role scope, team membership, responsible-manager ownership, and active Ticket assignment through `crm_can_access_ticket`.
 
-The schema currently has no monetary amount, currency, lead-source, campaign, expected-close-date, or sales-target fields. Revenue, weighted pipeline value, average deal value, source attribution, campaign performance, and forecasts are intentionally not shown.
+Sales performance is available under Reports & Insights → Sales performance (`/console/reports/sales`), having moved from the CRM dashboard. It shows recorded won deal values, current open pipeline values, monthly won values, currency selection, missing-value coverage, and supporting tickets. Its date, department, pipeline, and owner filters apply independently of the reporting overview. These are recorded deal values, not payments received. Access requires Reports access and the existing dashboard permission for an active Marketing Manager, Sales Manager, Delivery Manager, or Leadership role; database scope checks remain unchanged.
+
+Lead-source, campaign, expected-close-date, and sales-target fields are not available. Weighted pipeline value, source attribution, campaign performance, and forecasts are not shown.
 
 ## Entry points
 

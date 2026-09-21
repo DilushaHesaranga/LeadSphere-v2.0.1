@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { assistantService } from '../services/assistantService.js'
 import { FollowUpEmail } from './FollowUpEmail.jsx'
 import { Icon } from './Icons.jsx'
@@ -43,6 +44,11 @@ export function AssistantPanel({ ticket, onClose, onSource }) {
     checkStatus()
     return () => { statusRequest.current?.abort(); request.current?.abort() }
   }, [checkStatus])
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = previousOverflow }
+  }, [])
   useEffect(() => { endRef.current?.scrollIntoView({ block: 'nearest' }) }, [messages, pending, error])
 
   const ask = async (mode, message = prompts[mode], history = messages) => {
@@ -72,14 +78,13 @@ export function AssistantPanel({ ticket, onClose, onSource }) {
     catch { setCopied('Copy unavailable. Select and copy the text manually.') }
   }
 
-  return <div className="assistant-shell"><ModalShell title="AI Assistant" kicker={ticket.companyName} onClose={onClose}>
+  return createPortal(<div className="assistant-shell"><ModalShell title="AI Assistant" kicker={ticket.companyName} onClose={onClose}>
     <div className="assistant-ticket"><Icon name="file" size={18}/><div><strong>{ticket.projectTitle}</strong><small>Ticket {ticket.id.slice(0, 8)} · Read-only assistance</small></div></div>
     <p className="assistant-intro">Get a quick summary, ask about this ticket, or draft a follow-up email. Review AI suggestions before using them.</p>
     {availability === null && <p role="status">Checking assistant availability…</p>}
     {availability === false && <div className="assistant-unavailable" role="status"><strong>{statusError || 'AI Assistant is not enabled yet.'}</strong><p>Your tickets, notes, contacts, and follow-ups remain available.</p><button type="button" className="button button-secondary button-small" onClick={checkStatus}>Retry</button></div>}
     <div className="assistant-quick-actions">
       <button type="button" className="button button-secondary button-small" disabled={!availability || Boolean(pending)} onClick={() => ask('summary')}><Icon name="file" size={15}/>Summarize ticket</button>
-      <button type="button" className="button button-secondary button-small" disabled={!availability || Boolean(pending)} onClick={() => ask('chat', 'What should I discuss during the next follow-up?')}>Prepare next follow-up</button>
       <button type="button" className="button button-secondary button-small" disabled={!availability || Boolean(pending)} onClick={() => ask('email')}><Icon name="mail" size={15}/>Draft email</button>
     </div>
     <div className="assistant-conversation" role="log" aria-label="Ticket assistant conversation" aria-live="polite" aria-relevant="additions">
@@ -104,5 +109,5 @@ export function AssistantPanel({ ticket, onClose, onSource }) {
       <div><small>{question.length}/2000</small><button type="submit" className="button button-primary button-small" disabled={!availability || Boolean(pending) || !question.trim()}><Icon name="send" size={14}/>Ask assistant</button></div>
     </form>
     <footer className="assistant-footer"><p>Requests share selected ticket records with the AI provider. Chat lasts until you close this panel; only the latest eight messages are used for context.</p>{messages.length > 0 && <button type="button" className="text-button" disabled={Boolean(pending)} onClick={() => { setMessages([]); setError(''); setFailed(null); setCopied('') }}>Clear chat</button>}</footer>
-  </ModalShell></div>
+  </ModalShell></div>, document.body)
 }

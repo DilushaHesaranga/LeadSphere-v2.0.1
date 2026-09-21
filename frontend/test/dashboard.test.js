@@ -3,8 +3,23 @@ import test from 'node:test'
 import {
   dashboardCount, dashboardErrorMessage, dashboardMoney, dashboardParameters, dashboardRange,
   dashboardRangeError, dashboardSalesMonths, dashboardSalesValue, defaultDashboardFilters,
-  parseDashboardFilters, refreshDashboardFilters, serializeDashboardFilters,
+  parseDashboardFilters, parseSalesPerformanceFilters, defaultSalesPerformanceFilters, refreshDashboardFilters, serializeDashboardFilters,
 } from '../src/config/dashboard.js'
+
+test('sales opens across the month boundary while preserving explicit dates and scope', () => {
+  const today = '2026-09-20'
+  const filters = parseSalesPerformanceFilters('?department=sales', today)
+  assert.equal(filters.from, '2026-08-22')
+  assert.equal(filters.to, today)
+  assert.equal(filters.department, 'sales')
+  assert.equal(defaultSalesPerformanceFilters(today).preset, '30')
+  assert.equal(parseSalesPerformanceFilters('?period=month', today).from, '2026-09-01')
+  const custom = parseSalesPerformanceFilters('?period=custom&from=2026-08-01&to=2026-08-31&owner=example', today)
+  assert.equal(custom.from, '2026-08-01')
+  assert.equal(custom.to, '2026-08-31')
+  assert.equal(custom.ownerId, 'example')
+  assert.equal(defaultDashboardFilters(today).preset, 'month')
+})
 
 test('dashboard periods are inclusive and use the supplied local day', () => {
   assert.deepEqual(dashboardRange('month', '2026-09-17'), { from: '2026-09-01', to: '2026-09-17' })

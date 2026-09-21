@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { PERMISSIONS } from '../auth/permissions.js'
-import { canAccessDashboard } from '../auth/dashboardAccess.js'
+import { canAccessDashboard, canAccessManagementReports } from '../auth/dashboardAccess.js'
 import { AccessDenied } from '../components/Authorization.jsx'
 import { Brand } from '../components/Brand.jsx'
 import { Icon } from '../components/Icons.jsx'
@@ -21,11 +21,11 @@ import { CasesPage } from './CasesPage.jsx'
 import { PipelinePage } from './PipelinePage.jsx'
 import { ReportsPage } from './ReportsPage.jsx'
 import { ReportDetailPage } from './ReportDetailPage.jsx'
-import { DashboardPage } from './DashboardPage.jsx'
+import { PersonalDashboardPage } from './PersonalDashboardPage.jsx'
 
 const baseNavigation = [
   { path: '/console', label: 'Overview', icon: 'grid', exact: true },
-  { path: '/console/dashboard', label: 'CRM Dashboard', icon: 'chart', exact: true, permission: PERMISSIONS.DASHBOARDS_READ, dashboard: true },
+  { path: '/console/dashboard', label: 'My Dashboard', icon: 'chart', exact: true, permission: PERMISSIONS.DASHBOARDS_READ, dashboard: true },
   { path: '/console/cases', label: 'Cases', icon: 'file' },
   { path: '/console/leads', label: 'Leads', icon: 'lead', anyPermission: [PERMISSIONS.LEADS_READ, PERMISSIONS.TICKETS_READ] },
   { path: '/console/customers', label: 'Customers', icon: 'users', anyPermission: [PERMISSIONS.ACCOUNTS_READ, PERMISSIONS.CUSTOMER_CONTEXT_READ, PERMISSIONS.TICKETS_READ] },
@@ -79,6 +79,7 @@ export function ConsolePage({ pathname }) {
   const [pendingRequestCount, setPendingRequestCount] = useState(0)
   const userId = session?.user?.id
   const mayViewDashboard = canAccessDashboard(roles, permissionScopes)
+  const mayReadSales = canAccessManagementReports(roles, permissionScopes)
   const mayReviewRequests = canAccessNavigation(baseNavigation.find((item) => item.path === '/console/permissions'), permissionScopes)
 
   const loadPendingRequestCount = useCallback(async () => {
@@ -125,15 +126,16 @@ export function ConsolePage({ pathname }) {
   let content
   if (!authorized) content = <AccessDenied />
   else if (pathname === '/console') content = <Overview profile={profile} roles={roles}/>
-  else if (pathname === '/console/dashboard') content = <DashboardPage key={`${userId}-${JSON.stringify(permissionScopes)}`} profile={profile} mayReadTickets={canAccessNavigation({ permission: PERMISSIONS.TICKETS_READ }, permissionScopes)} mayReadReports={canAccessNavigation({ permission: PERMISSIONS.REPORTS_READ }, permissionScopes)}/>
+  else if (pathname === '/console/dashboard') content = <PersonalDashboardPage key={`${userId}-${JSON.stringify(roles)}-${JSON.stringify(permissionScopes)}`} profile={profile}/>
   else if (pathname === '/console/leads') content = <CaseWorkspacePage area="leads" />
   else if (pathname === '/console/customers') content = <CaseWorkspacePage area="customers" />
   else if (pathname === '/console/follow-ups') content = <FollowUpsPage />
   else if (pathname === '/console/timeline') content = <TimelinePage />
   else if (pathname === '/console/cases') content = <CasesPage />
   else if (pathname === '/console/pipeline') content = <PipelinePage />
-  else if (pathname === '/console/reports') content = <ReportsPage />
-  else if (pathname === '/console/reports/library') content = <ReportsPage view="library" />
+  else if (pathname === '/console/reports/sales') content = mayReadSales ? <ReportsPage key={`${userId}-${JSON.stringify(permissionScopes)}`} view="sales" mayReadSales={mayReadSales} mayReadTickets={canAccessNavigation({ permission: PERMISSIONS.TICKETS_READ }, permissionScopes)}/> : <AccessDenied />
+  else if (pathname === '/console/reports') content = <ReportsPage mayReadSales={mayReadSales}/>
+  else if (pathname === '/console/reports/library') content = <ReportsPage view="library" mayReadSales={mayReadSales}/>
   else if (/^\/console\/reports\/[a-z0-9-]+$/i.test(pathname)) content = <ReportDetailPage key={pathname} reportKey={pathname.split('/').at(-1)} />
   else if (pathname === '/console/permissions') content = <PermissionsPage />
   else if (pathname === '/console/team') content = <TeamManagementPage />

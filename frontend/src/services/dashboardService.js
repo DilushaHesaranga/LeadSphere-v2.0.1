@@ -9,6 +9,10 @@ async function rpc(name, parameters) {
 }
 
 export const dashboardService = Object.freeze({
+  getPersonal: () => rpc('get_crm_personal_dashboard', {}),
+  prepareCall: (ticketId, contactId) => rpc('prepare_crm_personal_call', {
+    p_ticket_id: ticketId, p_contact_id: contactId, p_request_id: crypto.randomUUID(),
+  }),
   getFilterOptions: () => rpc('get_crm_dashboard_filter_options', {}),
   getOverview: (filters) => rpc('get_crm_dashboard', dashboardParameters(filters)),
   listRecords: (filters, { kind = 'all', stage = '', page = 1 } = {}) => rpc('get_crm_dashboard_records', {
