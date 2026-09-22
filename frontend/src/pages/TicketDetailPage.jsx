@@ -121,7 +121,9 @@ export function TicketDetailPage({ ticketId }) {
   const [historyLoading, setHistoryLoading] = useState(false)
   const [historyError, setHistoryError] = useState('')
   const mayUpdate = can(PERMISSIONS.TICKETS_UPDATE)
-  const mayMoveStage = can(PERMISSIONS.DEALS_MOVE_STAGE) || can(PERMISSIONS.LEADS_CHANGE_STATUS)
+  const mayMoveStage = Boolean(user?.id && ticket &&
+    (ticket.responsibleManagerId === user.id || ticket.assignedUsers?.some((member) => member.id === user.id)) &&
+    (can(PERMISSIONS.DEALS_MOVE_STAGE) || can(PERMISSIONS.LEADS_CHANGE_STATUS)))
   const mayNote = can(PERMISSIONS.TICKET_NOTES_CREATE)
   const maySelfAssign = can(PERMISSIONS.TICKETS_READ)
   const mayRequest = can(PERMISSIONS.TICKET_REQUESTS_CREATE)
