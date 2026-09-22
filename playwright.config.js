@@ -1,6 +1,6 @@
 import { defineConfig } from '@playwright/test'
 
-const baseURL = 'http://127.0.0.1:4179'
+const baseURL = 'http://127.0.0.1:4189'
 
 export default defineConfig({
   testDir: './frontend/e2e',
@@ -22,9 +22,9 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   webServer: {
-    command: 'node frontend/node_modules/vite/bin/vite.js frontend --host 127.0.0.1 --port 4179 --strictPort',
+    command: 'node frontend/node_modules/vite/bin/vite.js frontend --host 127.0.0.1 --port 4189 --strictPort',
     url: baseURL,
-    reuseExistingServer: true,
+    reuseExistingServer: false,
     timeout: 30_000,
     env: {
       ...process.env,

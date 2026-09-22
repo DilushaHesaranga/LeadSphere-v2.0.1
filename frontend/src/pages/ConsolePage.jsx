@@ -8,7 +8,13 @@ import { Icon } from '../components/Icons.jsx'
 import { NotificationCenter } from '../components/NotificationCenter.jsx'
 import { caseTicketService } from '../services/caseTicketService.js'
 import { UserProfileMenu } from '../components/UserProfileMenu.jsx'
-import { canAccessNavigation, protectedRouteDestination } from '../utils/access.js'
+import {
+  canAccessConsolePathForRoles,
+  canAccessNavigation,
+  isSystemAdministrator,
+  navigationForRoles,
+  protectedRouteDestination,
+} from '../utils/access.js'
 import { navigate } from '../utils/router.js'
 import { TeamManagementPage } from './TeamManagementPage.jsx'
 import { CaseWorkspacePage } from './CaseWorkspacePage.jsx'
@@ -26,12 +32,12 @@ import { PersonalDashboardPage } from './PersonalDashboardPage.jsx'
 const baseNavigation = [
   { path: '/console', label: 'Overview', icon: 'grid', exact: true },
   { path: '/console/dashboard', label: 'My Dashboard', icon: 'chart', exact: true, permission: PERMISSIONS.DASHBOARDS_READ, dashboard: true },
-  { path: '/console/cases', label: 'Cases', icon: 'file' },
+  { path: '/console/cases', label: 'Cases', icon: 'file', permission: PERMISSIONS.CASES_READ },
   { path: '/console/leads', label: 'Leads', icon: 'lead', anyPermission: [PERMISSIONS.LEADS_READ, PERMISSIONS.TICKETS_READ] },
   { path: '/console/customers', label: 'Customers', icon: 'users', anyPermission: [PERMISSIONS.ACCOUNTS_READ, PERMISSIONS.CUSTOMER_CONTEXT_READ, PERMISSIONS.TICKETS_READ] },
   { path: '/console/follow-ups', label: 'Follow Ups', icon: 'calendar', permission: PERMISSIONS.TICKETS_READ },
   { path: '/console/pipeline', label: 'Pipeline', icon: 'briefcase', permission: PERMISSIONS.PIPELINE_READ },
-  { path: '/console/timeline', label: 'Timeline', icon: 'timeline' },
+  { path: '/console/timeline', label: 'Timeline', icon: 'timeline', permission: PERMISSIONS.TICKETS_READ },
   { path: '/console/reports', label: 'Reports & Insights', icon: 'chart', permission: PERMISSIONS.REPORTS_READ },
   { path: '/console/permissions', label: 'Permissions', icon: 'lock', permission: PERMISSIONS.TICKET_REQUESTS_REVIEW },
   { path: '/console/team', label: 'Team Management', icon: 'shield', permission: PERMISSIONS.TEAM_MEMBERS_READ },
@@ -78,9 +84,10 @@ export function ConsolePage({ pathname }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [pendingRequestCount, setPendingRequestCount] = useState(0)
   const userId = session?.user?.id
+  const systemAdministrator = isSystemAdministrator(roles)
   const mayViewDashboard = canAccessDashboard(roles, permissionScopes)
   const mayReadSales = canAccessManagementReports(roles, permissionScopes)
-  const mayReviewRequests = canAccessNavigation(baseNavigation.find((item) => item.path === '/console/permissions'), permissionScopes)
+  const mayReviewRequests = !systemAdministrator && canAccessNavigation(baseNavigation.find((item) => item.path === '/console/permissions'), permissionScopes)
 
   const loadPendingRequestCount = useCallback(async () => {
     if (!userId || !mayReviewRequests) return setPendingRequestCount(0)
@@ -109,10 +116,14 @@ export function ConsolePage({ pathname }) {
     if (destination) navigate(destination, { replace: true })
   }, [loading, session])
 
+  useEffect(() => {
+    if (!loading && session && systemAdministrator && pathname === '/console') navigate('/console/team', { replace: true })
+  }, [loading, pathname, session, systemAdministrator])
+
   if (loading) return <main className="centered-page"><div className="loading-state">Loading your secure workspace…</div></main>
   if (!session) return null
 
-  const navigation = baseNavigation.filter((item) => canAccessNavigation(item, permissionScopes) && (!item.dashboard || mayViewDashboard))
+  const navigation = navigationForRoles(baseNavigation, roles).filter((item) => canAccessNavigation(item, permissionScopes) && (!item.dashboard || mayViewDashboard))
   const isCaseRoute = /^\/console\/cases\/[0-9a-f-]+$/i.test(pathname)
   const isTicketRoute = /^\/console\/tickets\/[0-9a-f-]+$/i.test(pathname)
   const isReportsRoute = pathname === '/console/reports/library' || /^\/console\/reports\/[a-z0-9-]+$/i.test(pathname)
@@ -120,12 +131,13 @@ export function ConsolePage({ pathname }) {
     ?? (isCaseRoute ? { permission: PERMISSIONS.CASES_READ } : null)
     ?? (isTicketRoute ? { permission: PERMISSIONS.TICKETS_READ } : null)
     ?? (isReportsRoute ? { permission: PERMISSIONS.REPORTS_READ } : null)
-  const authorized = !requestedItem || (canAccessNavigation(requestedItem, permissionScopes) && (!requestedItem.dashboard || mayViewDashboard))
+  const authorized = canAccessConsolePathForRoles(pathname, roles)
+    && (!requestedItem || (canAccessNavigation(requestedItem, permissionScopes) && (!requestedItem.dashboard || mayViewDashboard)))
   const logout = async () => { await signOut(); navigate('/login', { replace: true }) }
 
   let content
   if (!authorized) content = <AccessDenied />
-  else if (pathname === '/console') content = <Overview profile={profile} roles={roles}/>
+  else if (pathname === '/console') content = systemAdministrator ? <TeamManagementPage/> : <Overview profile={profile} roles={roles}/>
   else if (pathname === '/console/dashboard') content = <PersonalDashboardPage key={`${userId}-${JSON.stringify(roles)}-${JSON.stringify(permissionScopes)}`} profile={profile}/>
   else if (pathname === '/console/leads') content = <CaseWorkspacePage area="leads" />
   else if (pathname === '/console/customers') content = <CaseWorkspacePage area="customers" />
@@ -154,7 +166,7 @@ export function ConsolePage({ pathname }) {
       <div className="console-main">
         <header className="console-topbar">
           <button className="icon-button mobile-menu" onClick={() => setMenuOpen(true)} aria-label="Open navigation"><Icon name="menu"/></button>
-          <div className="topbar-actions"><NotificationCenter/><UserProfileMenu profile={profile} roles={roles} email={session.user.email} onSignOut={logout} /></div>
+          <div className="topbar-actions">{!systemAdministrator && <NotificationCenter/>}<UserProfileMenu profile={profile} roles={roles} email={session.user.email} onSignOut={logout} /></div>
         </header>
         {accessError && <div className="alert alert-error console-alert">{accessError}</div>}
         {content}

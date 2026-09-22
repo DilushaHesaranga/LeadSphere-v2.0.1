@@ -9,9 +9,9 @@ const consolePage = await readFile(new URL('../src/pages/ConsolePage.jsx', impor
 const ticketPage = await readFile(new URL('../src/pages/TicketDetailPage.jsx', import.meta.url), 'utf8')
 const styles = await readFile(new URL('../src/App.css', import.meta.url), 'utf8')
 
-test('global Cases and Timeline navigation is visible without a permission gate', () => {
-  assert.match(consolePage, /\{ path: '\/console\/cases', label: 'Cases', icon: 'file' \}/)
-  assert.match(consolePage, /\{ path: '\/console\/timeline', label: 'Timeline', icon: 'timeline' \}/)
+test('global Cases and Timeline navigation requires CRM read access', () => {
+  assert.match(consolePage, /path: '\/console\/cases'.*permission: PERMISSIONS\.CASES_READ/)
+  assert.match(consolePage, /path: '\/console\/timeline'.*permission: PERMISSIONS\.TICKETS_READ/)
 })
 
 test('unfinished Activity module is not exposed in console navigation or routing', () => {
@@ -58,8 +58,9 @@ test('notification RPCs list and mark only the signed-in user records', () => {
   assert.match(notificationService, /mark_user_notifications_read/)
 })
 
-test('notification bell appears immediately before the profile control', () => {
-  assert.match(consolePage, /<div className="topbar-actions"><NotificationCenter\/><UserProfileMenu/)
+test('notification bell appears before the profile control for CRM users', () => {
+  assert.match(consolePage, /\{!systemAdministrator && <NotificationCenter\/>\}<UserProfileMenu/)
+  assert.match(consolePage, /isSystemAdministrator\(roles\)/)
   assert.match(notificationCenter, /aria-label=\{unreadCount/)
   assert.match(notificationCenter, /notification-count/)
 })

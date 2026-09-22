@@ -61,6 +61,36 @@ const followUp = {
   updatedAt: '2026-09-20T04:30:00.000Z',
 }
 
+const personalDashboard = {
+  asOf: '2026-09-22T04:30:00.000Z',
+  metrics: {
+    totalTickets: 26,
+    activeTickets: 18,
+    wonTickets: 6,
+    lostTickets: 2,
+    closedTickets: 8,
+  },
+  tickets: [{
+    id: testTicketId,
+    caseId: testCaseId,
+    projectTitle: ticket.projectTitle,
+    companyName: ticket.companyName,
+    stageName: 'Negotiation',
+    stageProbability: 60,
+    dealValue: 350000,
+    currency: 'LKR',
+    ageDays: 21,
+    interactions: 2,
+    overdueFollowUps: 1,
+    contacts: [{
+      id: 'contact-1',
+      name: 'Nimal Perera',
+      value: '+94112345678',
+    }],
+  }],
+  history: [],
+}
+
 const referenceData = {
   departments: [{ slug: 'sales', name: 'Sales' }],
   stages: [{ slug: 'negotiation', name: 'Negotiation' }],
@@ -138,6 +168,10 @@ export async function installSprint2Mocks(page, options = {}) {
     if (name === 'current_user_authorization') return respond(authorization)
     if (name === 'get_user_notifications') return respond({ items: [], unreadCount: 0 })
     if (name === 'get_crm_dashboard_filter_options') return respond(filterOptions)
+    if (name === 'get_crm_personal_dashboard') {
+      if (options.dashboardFailure) return respond({ message: 'Synthetic dashboard service failure' }, 503)
+      return respond(personalDashboard)
+    }
     if (name === 'get_crm_dashboard') {
       if (options.dashboardFailure) return respond({ message: 'Synthetic dashboard service failure' }, 503)
       return respond(overview(parameters))

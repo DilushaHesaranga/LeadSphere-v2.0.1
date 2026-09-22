@@ -1,4 +1,5 @@
 import { can } from '../auth/authorization.js'
+import { ROLES } from '../auth/permissions.js'
 
 export function canAccessNavigation(item, permissionScopes) {
   if (item.permission) {
@@ -8,6 +9,20 @@ export function canAccessNavigation(item, permissionScopes) {
     return item.anyPermission.some((permission) => can(permissionScopes, permission))
   }
   return true
+}
+
+export function isSystemAdministrator(roles = []) {
+  return roles.some((role) => role?.slug === ROLES.SYSTEM_ADMIN && (!role.status || role.status === 'active'))
+}
+
+export function navigationForRoles(items, roles = []) {
+  if (!isSystemAdministrator(roles)) return items
+  return items.filter((item) => item.path === '/console/team')
+}
+
+export function canAccessConsolePathForRoles(pathname, roles = []) {
+  if (!isSystemAdministrator(roles)) return true
+  return pathname === '/console' || pathname === '/console/team'
 }
 
 export function validateInvitation(email, role) {
